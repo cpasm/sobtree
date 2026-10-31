@@ -1,0 +1,690 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\ServiceContracts\Beta;
+
+use Anthropic\Beta\AnthropicBeta;
+use Anthropic\Beta\Messages\BetaCacheControlEphemeral;
+use Anthropic\Beta\Messages\BetaCompactionConfig;
+use Anthropic\Beta\Messages\BetaContainerParams;
+use Anthropic\Beta\Messages\BetaContextManagementConfig;
+use Anthropic\Beta\Messages\BetaDiagnosticsParam;
+use Anthropic\Beta\Messages\BetaFallbackCreditTokenParam;
+use Anthropic\Beta\Messages\BetaJSONOutputFormat;
+use Anthropic\Beta\Messages\BetaMessage;
+use Anthropic\Beta\Messages\BetaMessageTokensCount;
+use Anthropic\Beta\Messages\BetaMetadata;
+use Anthropic\Beta\Messages\BetaOutputConfig;
+use Anthropic\Beta\Messages\BetaRawContentBlockDeltaEvent;
+use Anthropic\Beta\Messages\BetaRawContentBlockStartEvent;
+use Anthropic\Beta\Messages\BetaRawContentBlockStopEvent;
+use Anthropic\Beta\Messages\BetaRawMessageDeltaEvent;
+use Anthropic\Beta\Messages\BetaRawMessageStartEvent;
+use Anthropic\Beta\Messages\BetaRawMessageStopEvent;
+use Anthropic\Beta\Messages\BetaRequestMCPServerURLDefinition;
+use Anthropic\Beta\Messages\BetaThinkingConfigAdaptive;
+use Anthropic\Beta\Messages\BetaThinkingConfigBetweenTools;
+use Anthropic\Beta\Messages\BetaThinkingConfigDisabled;
+use Anthropic\Beta\Messages\BetaThinkingConfigEnabled;
+use Anthropic\Beta\Messages\BetaToolChoiceAny;
+use Anthropic\Beta\Messages\BetaToolChoiceAuto;
+use Anthropic\Beta\Messages\BetaToolChoiceNone;
+use Anthropic\Beta\Messages\BetaToolChoiceTool;
+use Anthropic\Beta\Messages\MessageCreateParams\ServiceTier;
+use Anthropic\Beta\Messages\MessageCreateParams\Speed;
+use Anthropic\Core\Contracts\BaseStream;
+use Anthropic\Core\Exceptions\APIException;
+use Anthropic\Lib\Tools\BetaRunnableTool;
+use Anthropic\Lib\Tools\BetaToolRunner;
+use Anthropic\Messages\Model;
+use Anthropic\RequestOptions;
+
+/**
+ * @phpstan-import-type BetaMessageParamShape from \Anthropic\Beta\Messages\BetaMessageParam
+ * @phpstan-import-type BetaCacheControlEphemeralShape from \Anthropic\Beta\Messages\BetaCacheControlEphemeral
+ * @phpstan-import-type BetaCompactionConfigShape from \Anthropic\Beta\Messages\BetaCompactionConfig
+ * @phpstan-import-type ContainerShape from \Anthropic\Beta\Messages\MessageCreateParams\Container
+ * @phpstan-import-type BetaContextManagementConfigShape from \Anthropic\Beta\Messages\BetaContextManagementConfig
+ * @phpstan-import-type BetaDiagnosticsParamShape from \Anthropic\Beta\Messages\BetaDiagnosticsParam
+ * @phpstan-import-type FallbackCreditTokenShape from \Anthropic\Beta\Messages\MessageCreateParams\FallbackCreditToken
+ * @phpstan-import-type BetaFallbacksParamShape from \Anthropic\Beta\Messages\BetaFallbacksParam
+ * @phpstan-import-type BetaRequestMCPServerURLDefinitionShape from \Anthropic\Beta\Messages\BetaRequestMCPServerURLDefinition
+ * @phpstan-import-type BetaMetadataShape from \Anthropic\Beta\Messages\BetaMetadata
+ * @phpstan-import-type BetaOutputConfigShape from \Anthropic\Beta\Messages\BetaOutputConfig
+ * @phpstan-import-type BetaJSONOutputFormatShape from \Anthropic\Beta\Messages\BetaJSONOutputFormat
+ * @phpstan-import-type SystemShape from \Anthropic\Beta\Messages\MessageCreateParams\System
+ * @phpstan-import-type BetaThinkingConfigParamShape from \Anthropic\Beta\Messages\BetaThinkingConfigParam
+ * @phpstan-import-type BetaToolChoiceShape from \Anthropic\Beta\Messages\BetaToolChoice
+ * @phpstan-import-type BetaToolUnionShape from \Anthropic\Beta\Messages\BetaToolUnion
+ * @phpstan-import-type RequestOpts from \Anthropic\RequestOptions
+ * @phpstan-import-type SystemShape from \Anthropic\Beta\Messages\MessageCountTokensParams\System as SystemShape1
+ * @phpstan-import-type ToolShape from \Anthropic\Beta\Messages\MessageCountTokensParams\Tool
+ */
+interface MessagesContract
+{
+    /**
+     * @api
+     *
+     * @param int $maxTokens Body param: The maximum number of tokens to generate before stopping.
+     *
+     * Note that our models may stop _before_ reaching this maximum. This parameter only specifies the absolute maximum number of tokens to generate.
+     *
+     * Set to `0` to populate the [prompt cache](https://platform.claude.com/docs/en/build-with-claude/prompt-caching#pre-warming-the-cache) without generating a response.
+     *
+     * Different models have different maximum values for this parameter.  See [models](https://platform.claude.com/docs/en/about-claude/models/overview) for details.
+     * @param list<BetaMessageParamShape> $messages Body param: Input messages.
+     *
+     * Our models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.
+     *
+     * Each input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.
+     *
+     * If the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).
+     *
+     * Example with a single `user` message:
+     *
+     * ```json
+     * [{"role": "user", "content": "Hello, Claude"}]
+     * ```
+     *
+     * Example with multiple conversational turns:
+     *
+     * ```json
+     * [
+     *   {"role": "user", "content": "Hello there."},
+     *   {"role": "assistant", "content": "Hi, I'm Claude. How can I help you?"},
+     *   {"role": "user", "content": "Can you explain LLMs in plain English?"},
+     * ]
+     * ```
+     *
+     * Example with a partially-filled response from Claude, for models that support prefill:
+     *
+     * ```json
+     * [
+     *   {"role": "user", "content": "What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun"},
+     *   {"role": "assistant", "content": "The best answer is ("},
+     * ]
+     * ```
+     *
+     * Each input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `"text"`. The following input messages are equivalent:
+     *
+     * ```json
+     * {"role": "user", "content": "Hello, Claude"}
+     * ```
+     *
+     * ```json
+     * {"role": "user", "content": [{"type": "text", "text": "Hello, Claude"}]}
+     * ```
+     *
+     * See [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).
+     *
+     * Note that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter.
+     *
+     * There is a limit of 100,000 messages in a single request.
+     * @param string|Model|value-of<Model> $model Body param: The model that will complete your prompt.
+     *
+     * See [models](https://docs.anthropic.com/en/docs/models-overview) for additional details and options.
+     * @param BetaCacheControlEphemeral|BetaCacheControlEphemeralShape|null $cacheControl body param: Top-level cache control automatically applies a cache_control marker to the last cacheable block in the request
+     * @param BetaCompactionConfig|BetaCompactionConfigShape|null $compaction Body param: Compaction configuration.
+     *
+     * When set on `POST /v1/messages`, the request is a compaction request: the conversation in `messages` is summarized and the response holds only the resulting `compaction` block (`stop_reason` `"compaction"`), which later requests send first in `messages` in place of the messages it summarizes. `POST /v1/messages/count_tokens` accepts this parameter and ignores it: the count it returns is for the conversation in `messages` as sent. Cannot be combined with `context_management`.
+     * @param ContainerShape|null $container body param: Container identifier for reuse across requests
+     * @param BetaContextManagementConfig|BetaContextManagementConfigShape|null $contextManagement Body param: Context management configuration.
+     *
+     * This allows you to control how Claude manages context across multiple requests, such as whether to clear function results or not.
+     * @param BetaDiagnosticsParam|BetaDiagnosticsParamShape|null $diagnostics Body param: Request-level diagnostics. Supply `previous_message_id` to have the response include `diagnostics.cache_miss_reason` explaining any prompt-cache divergence from that prior request.
+     * @param FallbackCreditTokenShape|null $fallbackCreditToken Body param: The `fallback_credit_token` from a prior refusal's `stop_details`.
+     *
+     * When a preceding request was refused and returned a `fallback_credit_token`,
+     * pass that code here on the retry to have the retry's cache-creation tokens
+     * for the prefix that was warm on the refused model billed at the cache-read
+     * rate. Must be redeemed by the same organization and workspace, with the same
+     * request body (optionally extended by one appended `assistant` message whose
+     * content is the partial text — with any trailing whitespace stripped from
+     * the final text block — and paired server-tool blocks streamed before the
+     * refusal; the appended-assistant form is not available for requests with
+     * `output_format` set or forced `tool_choice`), on an eligible fallback
+     * model, on the same platform,
+     * and within 5 minutes of the refusal; a mismatch is a 400. A token minted
+     * mid-server-tool-loop whose partial content was continuable may only be
+     * redeemed with the appended-assistant form — if an exact-body retry is
+     * rejected with a 400 saying the token must be redeemed by continuing the
+     * partial response, retry with the appended-assistant form instead.
+     *
+     * When the appended-assistant form is used on a model that otherwise disallows
+     * assistant-turn prefill, this token also authorizes that one prefill.
+     * @param BetaFallbacksParamShape|null $fallbacks Body param: Opt-in server-side retry on one or more substitute models when the requested model declines for policy reasons. Tried in order: if the first entry also declines, the second is tried, and so on. Some models don't support fallbacks; on those models, a list of fallback models returns a 400 error. See [Server-side fallback](https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback#server-side-fallback). The string "default" requests the requested model's server-defined default fallback configuration. On a model that doesn't support fallbacks, the request runs on the requested model alone, so a declined request stays declined.
+     * @param string|null $inferenceGeo Body param: Specifies the geographic region for inference processing. If not specified, the workspace's `default_inference_geo` is used.
+     * @param list<BetaRequestMCPServerURLDefinition|BetaRequestMCPServerURLDefinitionShape> $mcpServers Body param: MCP servers to be utilized in this request
+     * @param BetaMetadata|BetaMetadataShape $metadata body param: An object describing metadata about the request
+     * @param BetaOutputConfig|BetaOutputConfigShape $outputConfig body param: Configuration options for the model's output, such as the output format
+     * @param BetaJSONOutputFormat|BetaJSONOutputFormatShape|null $outputFormat Body param: Deprecated: Use `output_config.format` instead. See [structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)
+     *
+     * A schema to specify Claude's output format in responses. This parameter will be removed in a future release.
+     * @param ServiceTier|value-of<ServiceTier> $serviceTier Body param: Determines whether to use priority capacity (if available) or standard capacity for this request.
+     *
+     * Anthropic offers different levels of service for your API requests. See [service-tiers](https://platform.claude.com/docs/en/api/service-tiers) for details.
+     * @param Speed|value-of<Speed>|null $speed Body param: The inference speed mode for this request. `"fast"` enables high output-tokens-per-second inference.
+     *
+     * Some models require the `fast-mode-2026-02-01` beta header for any `speed` value. See [fast mode](https://platform.claude.com/docs/en/build-with-claude/fast-mode) for which models.
+     * @param list<string> $stopSequences Body param: Custom text sequences that will cause the model to stop generating.
+     *
+     * Our models will normally stop when they have naturally completed their turn, which will result in a response `stop_reason` of `"end_turn"`.
+     *
+     * If you want the model to stop generating when it encounters custom strings of text, you can use the `stop_sequences` parameter. If the model encounters one of the custom sequences, the response `stop_reason` value will be `"stop_sequence"` and the response `stop_sequence` value will contain the matched stop sequence.
+     * @param SystemShape $system Body param: System prompt.
+     *
+     * A system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role).
+     * @param BetaThinkingConfigParamShape $thinking Body param: Configuration for Claude's thinking.
+     *
+     * With `{"type": "adaptive"}`, Claude decides when and how much to think. With `{"type": "enabled"}` (manual extended thinking), you set a `budget_tokens` of at least 1,024. Thinking tokens count toward your `max_tokens` limit.
+     *
+     * Which `type` values are accepted, and what happens when you omit `thinking`, depend on the model. See [thinking](https://platform.claude.com/docs/en/build-with-claude/thinking#configuring-thinking) for each model's behavior.
+     * @param BetaToolChoiceShape $toolChoice Body param: How the model should use the provided tools. The model can use a specific tool, any available tool, decide by itself, or not use tools at all.
+     * @param list<BetaToolUnionShape> $tools Body param: Definitions of tools that the model may use.
+     *
+     * If you include `tools` in your API request, the model may return `tool_use` content blocks that represent the model's use of those tools. You can then run those tools using the tool input generated by the model and then optionally return results back to the model using `tool_result` content blocks.
+     *
+     * There are two types of tools: **client tools** and **server tools**. The behavior described below applies to client tools. For [server tools](https://platform.claude.com/docs/en/agents-and-tools/tool-use/server-tools), see their individual documentation as each has its own behavior (e.g., the [web search tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool)).
+     *
+     * Each tool definition includes:
+     *
+     * * `name`: Name of the tool.
+     * * `description`: Optional, but strongly-recommended description of the tool.
+     * * `input_schema`: [JSON schema](https://json-schema.org/draft/2020-12) for the tool `input` shape that the model will produce in `tool_use` output content blocks.
+     *
+     * For example, if you defined `tools` as:
+     *
+     * ```json
+     * [
+     *   {
+     *     "name": "get_stock_price",
+     *     "description": "Get the current stock price for a given ticker symbol.",
+     *     "input_schema": {
+     *       "type": "object",
+     *       "properties": {
+     *         "ticker": {
+     *           "type": "string",
+     *           "description": "The stock ticker symbol, e.g. AAPL for Apple Inc."
+     *         }
+     *       },
+     *       "required": ["ticker"]
+     *     }
+     *   }
+     * ]
+     * ```
+     *
+     * And then asked the model "What's the S&P 500 at today?", the model might produce `tool_use` content blocks in the response like this:
+     *
+     * ```json
+     * [
+     *   {
+     *     "type": "tool_use",
+     *     "id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",
+     *     "name": "get_stock_price",
+     *     "input": { "ticker": "^GSPC" }
+     *   }
+     * ]
+     * ```
+     *
+     * You might then run your `get_stock_price` tool with `{"ticker": "^GSPC"}` as an input, and return the following back to the model in a subsequent `user` message:
+     *
+     * ```json
+     * [
+     *   {
+     *     "type": "tool_result",
+     *     "tool_use_id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",
+     *     "content": "259.75 USD"
+     *   }
+     * ]
+     * ```
+     *
+     * Tools can be used for workflows that include running client-side tools and functions, or more generally whenever you want the model to produce a particular JSON structure of output.
+     *
+     * See our [guide](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview) for more details.
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: Optional header to specify the beta version(s) you want to use
+     * @param string $userProfileID Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization.
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function create(
+        int $maxTokens,
+        array $messages,
+        Model|string $model,
+        BetaCacheControlEphemeral|array|null $cacheControl = null,
+        BetaCompactionConfig|array|null $compaction = null,
+        string|BetaContainerParams|array|null $container = null,
+        BetaContextManagementConfig|array|null $contextManagement = null,
+        BetaDiagnosticsParam|array|null $diagnostics = null,
+        string|BetaFallbackCreditTokenParam|array|null $fallbackCreditToken = null,
+        string|array|null $fallbacks = null,
+        ?string $inferenceGeo = null,
+        ?array $mcpServers = null,
+        BetaMetadata|array|null $metadata = null,
+        BetaOutputConfig|array|null $outputConfig = null,
+        BetaJSONOutputFormat|array|null $outputFormat = null,
+        ServiceTier|string|null $serviceTier = null,
+        Speed|string|null $speed = null,
+        ?array $stopSequences = null,
+        string|array|null $system = null,
+        BetaThinkingConfigEnabled|array|BetaThinkingConfigDisabled|BetaThinkingConfigBetweenTools|BetaThinkingConfigAdaptive|null $thinking = null,
+        BetaToolChoiceAuto|array|BetaToolChoiceAny|BetaToolChoiceTool|BetaToolChoiceNone|null $toolChoice = null,
+        ?array $tools = null,
+        ?array $betas = null,
+        ?string $userProfileID = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): BetaMessage;
+
+    /**
+     * @api
+     *
+     * @param int $maxTokens Body param: The maximum number of tokens to generate before stopping.
+     *
+     * Note that our models may stop _before_ reaching this maximum. This parameter only specifies the absolute maximum number of tokens to generate.
+     *
+     * Set to `0` to populate the [prompt cache](https://platform.claude.com/docs/en/build-with-claude/prompt-caching#pre-warming-the-cache) without generating a response.
+     *
+     * Different models have different maximum values for this parameter.  See [models](https://platform.claude.com/docs/en/about-claude/models/overview) for details.
+     * @param list<BetaMessageParamShape> $messages Body param: Input messages.
+     *
+     * Our models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.
+     *
+     * Each input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.
+     *
+     * If the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).
+     *
+     * Example with a single `user` message:
+     *
+     * ```json
+     * [{"role": "user", "content": "Hello, Claude"}]
+     * ```
+     *
+     * Example with multiple conversational turns:
+     *
+     * ```json
+     * [
+     *   {"role": "user", "content": "Hello there."},
+     *   {"role": "assistant", "content": "Hi, I'm Claude. How can I help you?"},
+     *   {"role": "user", "content": "Can you explain LLMs in plain English?"},
+     * ]
+     * ```
+     *
+     * Example with a partially-filled response from Claude, for models that support prefill:
+     *
+     * ```json
+     * [
+     *   {"role": "user", "content": "What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun"},
+     *   {"role": "assistant", "content": "The best answer is ("},
+     * ]
+     * ```
+     *
+     * Each input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `"text"`. The following input messages are equivalent:
+     *
+     * ```json
+     * {"role": "user", "content": "Hello, Claude"}
+     * ```
+     *
+     * ```json
+     * {"role": "user", "content": [{"type": "text", "text": "Hello, Claude"}]}
+     * ```
+     *
+     * See [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).
+     *
+     * Note that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter.
+     *
+     * There is a limit of 100,000 messages in a single request.
+     * @param string|Model|value-of<Model> $model Body param: The model that will complete your prompt.
+     *
+     * See [models](https://docs.anthropic.com/en/docs/models-overview) for additional details and options.
+     * @param BetaCacheControlEphemeral|BetaCacheControlEphemeralShape|null $cacheControl body param: Top-level cache control automatically applies a cache_control marker to the last cacheable block in the request
+     * @param BetaCompactionConfig|BetaCompactionConfigShape|null $compaction Body param: Compaction configuration.
+     *
+     * When set on `POST /v1/messages`, the request is a compaction request: the conversation in `messages` is summarized and the response holds only the resulting `compaction` block (`stop_reason` `"compaction"`), which later requests send first in `messages` in place of the messages it summarizes. `POST /v1/messages/count_tokens` accepts this parameter and ignores it: the count it returns is for the conversation in `messages` as sent. Cannot be combined with `context_management`.
+     * @param ContainerShape|null $container body param: Container identifier for reuse across requests
+     * @param BetaContextManagementConfig|BetaContextManagementConfigShape|null $contextManagement Body param: Context management configuration.
+     *
+     * This allows you to control how Claude manages context across multiple requests, such as whether to clear function results or not.
+     * @param BetaDiagnosticsParam|BetaDiagnosticsParamShape|null $diagnostics Body param: Request-level diagnostics. Supply `previous_message_id` to have the response include `diagnostics.cache_miss_reason` explaining any prompt-cache divergence from that prior request.
+     * @param FallbackCreditTokenShape|null $fallbackCreditToken Body param: The `fallback_credit_token` from a prior refusal's `stop_details`.
+     *
+     * When a preceding request was refused and returned a `fallback_credit_token`,
+     * pass that code here on the retry to have the retry's cache-creation tokens
+     * for the prefix that was warm on the refused model billed at the cache-read
+     * rate. Must be redeemed by the same organization and workspace, with the same
+     * request body (optionally extended by one appended `assistant` message whose
+     * content is the partial text — with any trailing whitespace stripped from
+     * the final text block — and paired server-tool blocks streamed before the
+     * refusal; the appended-assistant form is not available for requests with
+     * `output_format` set or forced `tool_choice`), on an eligible fallback
+     * model, on the same platform,
+     * and within 5 minutes of the refusal; a mismatch is a 400. A token minted
+     * mid-server-tool-loop whose partial content was continuable may only be
+     * redeemed with the appended-assistant form — if an exact-body retry is
+     * rejected with a 400 saying the token must be redeemed by continuing the
+     * partial response, retry with the appended-assistant form instead.
+     *
+     * When the appended-assistant form is used on a model that otherwise disallows
+     * assistant-turn prefill, this token also authorizes that one prefill.
+     * @param BetaFallbacksParamShape|null $fallbacks Body param: Opt-in server-side retry on one or more substitute models when the requested model declines for policy reasons. Tried in order: if the first entry also declines, the second is tried, and so on. Some models don't support fallbacks; on those models, a list of fallback models returns a 400 error. See [Server-side fallback](https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback#server-side-fallback). The string "default" requests the requested model's server-defined default fallback configuration. On a model that doesn't support fallbacks, the request runs on the requested model alone, so a declined request stays declined.
+     * @param string|null $inferenceGeo Body param: Specifies the geographic region for inference processing. If not specified, the workspace's `default_inference_geo` is used.
+     * @param list<BetaRequestMCPServerURLDefinition|BetaRequestMCPServerURLDefinitionShape> $mcpServers Body param: MCP servers to be utilized in this request
+     * @param BetaMetadata|BetaMetadataShape $metadata body param: An object describing metadata about the request
+     * @param BetaOutputConfig|BetaOutputConfigShape $outputConfig body param: Configuration options for the model's output, such as the output format
+     * @param BetaJSONOutputFormat|BetaJSONOutputFormatShape|null $outputFormat Body param: Deprecated: Use `output_config.format` instead. See [structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)
+     *
+     * A schema to specify Claude's output format in responses. This parameter will be removed in a future release.
+     * @param ServiceTier|value-of<ServiceTier> $serviceTier Body param: Determines whether to use priority capacity (if available) or standard capacity for this request.
+     *
+     * Anthropic offers different levels of service for your API requests. See [service-tiers](https://platform.claude.com/docs/en/api/service-tiers) for details.
+     * @param Speed|value-of<Speed>|null $speed Body param: The inference speed mode for this request. `"fast"` enables high output-tokens-per-second inference.
+     *
+     * Some models require the `fast-mode-2026-02-01` beta header for any `speed` value. See [fast mode](https://platform.claude.com/docs/en/build-with-claude/fast-mode) for which models.
+     * @param list<string> $stopSequences Body param: Custom text sequences that will cause the model to stop generating.
+     *
+     * Our models will normally stop when they have naturally completed their turn, which will result in a response `stop_reason` of `"end_turn"`.
+     *
+     * If you want the model to stop generating when it encounters custom strings of text, you can use the `stop_sequences` parameter. If the model encounters one of the custom sequences, the response `stop_reason` value will be `"stop_sequence"` and the response `stop_sequence` value will contain the matched stop sequence.
+     * @param SystemShape $system Body param: System prompt.
+     *
+     * A system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role).
+     * @param BetaThinkingConfigParamShape $thinking Body param: Configuration for Claude's thinking.
+     *
+     * With `{"type": "adaptive"}`, Claude decides when and how much to think. With `{"type": "enabled"}` (manual extended thinking), you set a `budget_tokens` of at least 1,024. Thinking tokens count toward your `max_tokens` limit.
+     *
+     * Which `type` values are accepted, and what happens when you omit `thinking`, depend on the model. See [thinking](https://platform.claude.com/docs/en/build-with-claude/thinking#configuring-thinking) for each model's behavior.
+     * @param BetaToolChoiceShape $toolChoice Body param: How the model should use the provided tools. The model can use a specific tool, any available tool, decide by itself, or not use tools at all.
+     * @param list<BetaToolUnionShape> $tools Body param: Definitions of tools that the model may use.
+     *
+     * If you include `tools` in your API request, the model may return `tool_use` content blocks that represent the model's use of those tools. You can then run those tools using the tool input generated by the model and then optionally return results back to the model using `tool_result` content blocks.
+     *
+     * There are two types of tools: **client tools** and **server tools**. The behavior described below applies to client tools. For [server tools](https://platform.claude.com/docs/en/agents-and-tools/tool-use/server-tools), see their individual documentation as each has its own behavior (e.g., the [web search tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool)).
+     *
+     * Each tool definition includes:
+     *
+     * * `name`: Name of the tool.
+     * * `description`: Optional, but strongly-recommended description of the tool.
+     * * `input_schema`: [JSON schema](https://json-schema.org/draft/2020-12) for the tool `input` shape that the model will produce in `tool_use` output content blocks.
+     *
+     * For example, if you defined `tools` as:
+     *
+     * ```json
+     * [
+     *   {
+     *     "name": "get_stock_price",
+     *     "description": "Get the current stock price for a given ticker symbol.",
+     *     "input_schema": {
+     *       "type": "object",
+     *       "properties": {
+     *         "ticker": {
+     *           "type": "string",
+     *           "description": "The stock ticker symbol, e.g. AAPL for Apple Inc."
+     *         }
+     *       },
+     *       "required": ["ticker"]
+     *     }
+     *   }
+     * ]
+     * ```
+     *
+     * And then asked the model "What's the S&P 500 at today?", the model might produce `tool_use` content blocks in the response like this:
+     *
+     * ```json
+     * [
+     *   {
+     *     "type": "tool_use",
+     *     "id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",
+     *     "name": "get_stock_price",
+     *     "input": { "ticker": "^GSPC" }
+     *   }
+     * ]
+     * ```
+     *
+     * You might then run your `get_stock_price` tool with `{"ticker": "^GSPC"}` as an input, and return the following back to the model in a subsequent `user` message:
+     *
+     * ```json
+     * [
+     *   {
+     *     "type": "tool_result",
+     *     "tool_use_id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",
+     *     "content": "259.75 USD"
+     *   }
+     * ]
+     * ```
+     *
+     * Tools can be used for workflows that include running client-side tools and functions, or more generally whenever you want the model to produce a particular JSON structure of output.
+     *
+     * See our [guide](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview) for more details.
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: Optional header to specify the beta version(s) you want to use
+     * @param string $userProfileID Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization.
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseStream<BetaRawMessageStartEvent|BetaRawMessageDeltaEvent|BetaRawMessageStopEvent|BetaRawContentBlockStartEvent|BetaRawContentBlockDeltaEvent|BetaRawContentBlockStopEvent,>
+     *
+     * @throws APIException
+     */
+    public function createStream(
+        int $maxTokens,
+        array $messages,
+        Model|string $model,
+        BetaCacheControlEphemeral|array|null $cacheControl = null,
+        BetaCompactionConfig|array|null $compaction = null,
+        string|BetaContainerParams|array|null $container = null,
+        BetaContextManagementConfig|array|null $contextManagement = null,
+        BetaDiagnosticsParam|array|null $diagnostics = null,
+        string|BetaFallbackCreditTokenParam|array|null $fallbackCreditToken = null,
+        string|array|null $fallbacks = null,
+        ?string $inferenceGeo = null,
+        ?array $mcpServers = null,
+        BetaMetadata|array|null $metadata = null,
+        BetaOutputConfig|array|null $outputConfig = null,
+        BetaJSONOutputFormat|array|null $outputFormat = null,
+        ServiceTier|string|null $serviceTier = null,
+        Speed|string|null $speed = null,
+        ?array $stopSequences = null,
+        string|array|null $system = null,
+        BetaThinkingConfigEnabled|array|BetaThinkingConfigDisabled|BetaThinkingConfigBetweenTools|BetaThinkingConfigAdaptive|null $thinking = null,
+        BetaToolChoiceAuto|array|BetaToolChoiceAny|BetaToolChoiceTool|BetaToolChoiceNone|null $toolChoice = null,
+        ?array $tools = null,
+        ?array $betas = null,
+        ?string $userProfileID = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseStream;
+
+    /**
+     * @api
+     *
+     * @param list<BetaMessageParamShape> $messages Body param: Input messages.
+     *
+     * Our models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.
+     *
+     * Each input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.
+     *
+     * If the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).
+     *
+     * Example with a single `user` message:
+     *
+     * ```json
+     * [{"role": "user", "content": "Hello, Claude"}]
+     * ```
+     *
+     * Example with multiple conversational turns:
+     *
+     * ```json
+     * [
+     *   {"role": "user", "content": "Hello there."},
+     *   {"role": "assistant", "content": "Hi, I'm Claude. How can I help you?"},
+     *   {"role": "user", "content": "Can you explain LLMs in plain English?"},
+     * ]
+     * ```
+     *
+     * Example with a partially-filled response from Claude, for models that support prefill:
+     *
+     * ```json
+     * [
+     *   {"role": "user", "content": "What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun"},
+     *   {"role": "assistant", "content": "The best answer is ("},
+     * ]
+     * ```
+     *
+     * Each input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `"text"`. The following input messages are equivalent:
+     *
+     * ```json
+     * {"role": "user", "content": "Hello, Claude"}
+     * ```
+     *
+     * ```json
+     * {"role": "user", "content": [{"type": "text", "text": "Hello, Claude"}]}
+     * ```
+     *
+     * See [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).
+     *
+     * Note that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter.
+     *
+     * There is a limit of 100,000 messages in a single request.
+     * @param string|Model|value-of<Model> $model Body param: The model that will complete your prompt.
+     *
+     * See [models](https://docs.anthropic.com/en/docs/models-overview) for additional details and options.
+     * @param BetaCacheControlEphemeral|BetaCacheControlEphemeralShape|null $cacheControl body param: Top-level cache control automatically applies a cache_control marker to the last cacheable block in the request
+     * @param BetaCompactionConfig|BetaCompactionConfigShape|null $compaction Body param: Compaction configuration.
+     *
+     * When set on `POST /v1/messages`, the request is a compaction request: the conversation in `messages` is summarized and the response holds only the resulting `compaction` block (`stop_reason` `"compaction"`), which later requests send first in `messages` in place of the messages it summarizes. `POST /v1/messages/count_tokens` accepts this parameter and ignores it: the count it returns is for the conversation in `messages` as sent. Cannot be combined with `context_management`.
+     * @param BetaContextManagementConfig|BetaContextManagementConfigShape|null $contextManagement Body param: Context management configuration.
+     *
+     * This allows you to control how Claude manages context across multiple requests, such as whether to clear function results or not.
+     * @param list<BetaRequestMCPServerURLDefinition|BetaRequestMCPServerURLDefinitionShape> $mcpServers Body param: MCP servers to be utilized in this request
+     * @param BetaOutputConfig|BetaOutputConfigShape $outputConfig body param: Configuration options for the model's output, such as the output format
+     * @param BetaJSONOutputFormat|BetaJSONOutputFormatShape|null $outputFormat Body param: Deprecated: Use `output_config.format` instead. See [structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)
+     *
+     * A schema to specify Claude's output format in responses. This parameter will be removed in a future release.
+     * @param \Anthropic\Beta\Messages\MessageCountTokensParams\Speed|value-of<\Anthropic\Beta\Messages\MessageCountTokensParams\Speed>|null $speed Body param: The inference speed mode for this request. `"fast"` enables high output-tokens-per-second inference.
+     *
+     * Some models require the `fast-mode-2026-02-01` beta header for any `speed` value. See [fast mode](https://platform.claude.com/docs/en/build-with-claude/fast-mode) for which models.
+     * @param SystemShape1 $system Body param: System prompt.
+     *
+     * A system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role).
+     * @param BetaThinkingConfigParamShape $thinking Body param: Configuration for Claude's thinking.
+     *
+     * With `{"type": "adaptive"}`, Claude decides when and how much to think. With `{"type": "enabled"}` (manual extended thinking), you set a `budget_tokens` of at least 1,024. Thinking tokens count toward your `max_tokens` limit.
+     *
+     * Which `type` values are accepted, and what happens when you omit `thinking`, depend on the model. See [thinking](https://platform.claude.com/docs/en/build-with-claude/thinking#configuring-thinking) for each model's behavior.
+     * @param BetaToolChoiceShape $toolChoice Body param: How the model should use the provided tools. The model can use a specific tool, any available tool, decide by itself, or not use tools at all.
+     * @param list<ToolShape> $tools Body param: Definitions of tools that the model may use.
+     *
+     * If you include `tools` in your API request, the model may return `tool_use` content blocks that represent the model's use of those tools. You can then run those tools using the tool input generated by the model and then optionally return results back to the model using `tool_result` content blocks.
+     *
+     * There are two types of tools: **client tools** and **server tools**. The behavior described below applies to client tools. For [server tools](https://platform.claude.com/docs/en/agents-and-tools/tool-use/server-tools), see their individual documentation as each has its own behavior (e.g., the [web search tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool)).
+     *
+     * Each tool definition includes:
+     *
+     * * `name`: Name of the tool.
+     * * `description`: Optional, but strongly-recommended description of the tool.
+     * * `input_schema`: [JSON schema](https://json-schema.org/draft/2020-12) for the tool `input` shape that the model will produce in `tool_use` output content blocks.
+     *
+     * For example, if you defined `tools` as:
+     *
+     * ```json
+     * [
+     *   {
+     *     "name": "get_stock_price",
+     *     "description": "Get the current stock price for a given ticker symbol.",
+     *     "input_schema": {
+     *       "type": "object",
+     *       "properties": {
+     *         "ticker": {
+     *           "type": "string",
+     *           "description": "The stock ticker symbol, e.g. AAPL for Apple Inc."
+     *         }
+     *       },
+     *       "required": ["ticker"]
+     *     }
+     *   }
+     * ]
+     * ```
+     *
+     * And then asked the model "What's the S&P 500 at today?", the model might produce `tool_use` content blocks in the response like this:
+     *
+     * ```json
+     * [
+     *   {
+     *     "type": "tool_use",
+     *     "id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",
+     *     "name": "get_stock_price",
+     *     "input": { "ticker": "^GSPC" }
+     *   }
+     * ]
+     * ```
+     *
+     * You might then run your `get_stock_price` tool with `{"ticker": "^GSPC"}` as an input, and return the following back to the model in a subsequent `user` message:
+     *
+     * ```json
+     * [
+     *   {
+     *     "type": "tool_result",
+     *     "tool_use_id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",
+     *     "content": "259.75 USD"
+     *   }
+     * ]
+     * ```
+     *
+     * Tools can be used for workflows that include running client-side tools and functions, or more generally whenever you want the model to produce a particular JSON structure of output.
+     *
+     * See our [guide](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview) for more details.
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: Optional header to specify the beta version(s) you want to use
+     * @param string $userProfileID Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization.
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function countTokens(
+        array $messages,
+        Model|string $model,
+        BetaCacheControlEphemeral|array|null $cacheControl = null,
+        BetaCompactionConfig|array|null $compaction = null,
+        BetaContextManagementConfig|array|null $contextManagement = null,
+        ?array $mcpServers = null,
+        BetaOutputConfig|array|null $outputConfig = null,
+        BetaJSONOutputFormat|array|null $outputFormat = null,
+        \Anthropic\Beta\Messages\MessageCountTokensParams\Speed|string|null $speed = null,
+        string|array|null $system = null,
+        BetaThinkingConfigEnabled|array|BetaThinkingConfigDisabled|BetaThinkingConfigBetweenTools|BetaThinkingConfigAdaptive|null $thinking = null,
+        BetaToolChoiceAuto|array|BetaToolChoiceAny|BetaToolChoiceTool|BetaToolChoiceNone|null $toolChoice = null,
+        ?array $tools = null,
+        ?array $betas = null,
+        ?string $userProfileID = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): BetaMessageTokensCount;
+
+    /**
+     * @api
+     *
+     * Create a tool runner that automatically handles the tool execution loop.
+     *
+     * @param int $maxTokens body param: The maximum number of tokens to generate before stopping
+     * @param list<array<string, mixed>> $messages body param: Initial input messages
+     * @param string|Model|value-of<Model> $model body param: The model to use
+     * @param list<BetaRunnableTool|BetaToolUnionShape> $tools tools available to the model
+     * @param int|null $maxIterations maximum number of API calls before stopping the loop
+     * @param array<string, mixed> $extraParams additional parameters forwarded to each create() call
+     */
+    public function toolRunner(
+        int $maxTokens,
+        array $messages,
+        Model|string $model,
+        array $tools = [],
+        ?int $maxIterations = null,
+        array $extraParams = [],
+    ): BetaToolRunner;
+}

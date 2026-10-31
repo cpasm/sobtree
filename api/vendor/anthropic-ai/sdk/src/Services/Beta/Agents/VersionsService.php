@@ -1,0 +1,74 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Services\Beta\Agents;
+
+use Anthropic\Beta\Agents\BetaManagedAgentsAgent;
+use Anthropic\Beta\AnthropicBeta;
+use Anthropic\Client;
+use Anthropic\Core\Exceptions\APIException;
+use Anthropic\Core\Util;
+use Anthropic\PageCursor;
+use Anthropic\RequestOptions;
+use Anthropic\ServiceContracts\Beta\Agents\VersionsContract;
+
+/**
+ * @phpstan-import-type RequestOpts from \Anthropic\RequestOptions
+ */
+final class VersionsService implements VersionsContract
+{
+    /**
+     * @api
+     */
+    public VersionsRawService $raw;
+
+    /**
+     * @internal
+     */
+    public function __construct(private Client $client)
+    {
+        $this->raw = new VersionsRawService($client);
+    }
+
+    /**
+     * @api
+     *
+     * List Agent Versions
+     *
+     * @param string $agentID path param: Agent ID to list versions for
+     * @param int $limit Query param: Maximum results per page. Default 20, maximum 100.
+     * @param string $page query param: Opaque pagination cursor
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return PageCursor<BetaManagedAgentsAgent>
+     *
+     * @throws APIException
+     */
+    public function list(
+        string $agentID,
+        ?int $limit = null,
+        ?string $page = null,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): PageCursor {
+        $params = Util::removeNulls(
+            [
+                'limit' => $limit,
+                'page' => $page,
+                'betas' => $betas,
+                'workspaceID' => $workspaceID,
+            ],
+        );
+
+        // @phpstan-ignore-next-line argument.type
+        $response = $this->raw->list($agentID, params: $params, requestOptions: $requestOptions);
+
+        return $response->parse();
+    }
+}

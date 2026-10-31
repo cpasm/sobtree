@@ -1,0 +1,167 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Beta\Sessions\Resources;
+
+use Anthropic\Beta\AnthropicBeta;
+use Anthropic\Core\Attributes\Optional;
+use Anthropic\Core\Attributes\Required;
+use Anthropic\Core\Concerns\SdkModel;
+use Anthropic\Core\Concerns\SdkParams;
+use Anthropic\Core\Contracts\BaseModel;
+use Anthropic\Core\Conversion\ConstantOf;
+
+/**
+ * Add Session Resource.
+ *
+ * @see Anthropic\Services\Beta\Sessions\ResourcesService::add()
+ *
+ * @phpstan-type ResourceAddParamsShape = array{
+ *   type: 'file',
+ *   fileID: string,
+ *   mountPath?: string|null,
+ *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>|null,
+ *   workspaceID?: string|null,
+ * }
+ */
+final class ResourceAddParams implements BaseModel
+{
+    /** @use SdkModel<ResourceAddParamsShape> */
+    use SdkModel;
+    use SdkParams;
+
+    /** @var 'file' $type */
+    #[Required(type: new ConstantOf('file'))]
+    public string $type = 'file';
+
+    /**
+     * ID of a previously uploaded file.
+     */
+    #[Required('file_id')]
+    public string $fileID;
+
+    /**
+     * Mount path in the container. Defaults to `/mnt/session/uploads/<file_id>`.
+     */
+    #[Optional('mount_path', nullable: true)]
+    public ?string $mountPath;
+
+    /**
+     * This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header.
+     *
+     * @var list<string|value-of<AnthropicBeta>>|null $betas
+     */
+    #[Optional(list: AnthropicBeta::class)]
+    public ?array $betas;
+
+    /**
+     * Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     */
+    #[Optional]
+    public ?string $workspaceID;
+
+    /**
+     * `new ResourceAddParams()` is missing required properties by the API.
+     *
+     * To enforce required parameters use
+     * ```
+     * ResourceAddParams::with(fileID: ...)
+     * ```
+     *
+     * Otherwise ensure the following setters are called
+     *
+     * ```
+     * (new ResourceAddParams())->withFileID(...)
+     * ```
+     */
+    public function __construct()
+    {
+        $this->initialize();
+    }
+
+    /**
+     * Construct an instance from the required parameters.
+     *
+     * You must use named parameters to construct any parameters with a default value.
+     *
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>>|null $betas
+     */
+    public static function with(
+        string $fileID,
+        ?string $mountPath = null,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+    ): self {
+        $self = new self;
+
+        $self['fileID'] = $fileID;
+
+        null !== $mountPath && $self['mountPath'] = $mountPath;
+        null !== $betas && $self['betas'] = $betas;
+        null !== $workspaceID && $self['workspaceID'] = $workspaceID;
+
+        return $self;
+    }
+
+    /**
+     * @param 'file' $type
+     */
+    public function withType(string $type): self
+    {
+        $self = clone $this;
+        $self['type'] = $type;
+
+        return $self;
+    }
+
+    /**
+     * ID of a previously uploaded file.
+     */
+    public function withFileID(string $fileID): self
+    {
+        $self = clone $this;
+        $self['fileID'] = $fileID;
+
+        return $self;
+    }
+
+    /**
+     * Mount path in the container. Defaults to `/mnt/session/uploads/<file_id>`.
+     */
+    public function withMountPath(?string $mountPath): self
+    {
+        $self = clone $this;
+        $self['mountPath'] = $mountPath;
+
+        return $self;
+    }
+
+    /**
+     * This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header.
+     *
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas
+     */
+    public function withBetas(array $betas): self
+    {
+        $self = clone $this;
+        $self['betas'] = $betas;
+
+        return $self;
+    }
+
+    /**
+     * Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     */
+    public function withWorkspaceID(string $workspaceID): self
+    {
+        $self = clone $this;
+        $self['workspaceID'] = $workspaceID;
+
+        return $self;
+    }
+}

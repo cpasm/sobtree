@@ -1,0 +1,151 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Beta\Messages;
+
+use Anthropic\Beta\Messages\BetaThinkingConfigEnabled\Display;
+use Anthropic\Core\Attributes\Optional;
+use Anthropic\Core\Attributes\Required;
+use Anthropic\Core\Concerns\SdkModel;
+use Anthropic\Core\Contracts\BaseModel;
+use Anthropic\Core\Conversion\ConstantOf;
+
+/**
+ * @phpstan-import-type BetaThinkingBlockBindingShape from \Anthropic\Beta\Messages\BetaThinkingBlockBinding
+ *
+ * @phpstan-type BetaThinkingConfigEnabledShape = array{
+ *   budgetTokens: int,
+ *   type: 'enabled',
+ *   blockBinding?: null|BetaThinkingBlockBinding|BetaThinkingBlockBindingShape,
+ *   display?: null|Display|value-of<Display>,
+ * }
+ */
+final class BetaThinkingConfigEnabled implements BaseModel
+{
+    /** @use SdkModel<BetaThinkingConfigEnabledShape> */
+    use SdkModel;
+
+    /** @var 'enabled' $type */
+    #[Required(type: new ConstantOf('enabled'))]
+    public string $type = 'enabled';
+
+    /**
+     * Determines how many tokens Claude can use for its internal reasoning process. Larger budgets can enable more thorough analysis for complex problems, improving response quality.
+     *
+     * Must be ≥1024 and less than `max_tokens`.
+     *
+     * See [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking) for details.
+     */
+    #[Required('budget_tokens')]
+    public int $budgetTokens;
+
+    /**
+     * Controls for block binding: what happens when a thinking block this request sends back fails the conversation check. `null`, absent or an empty object means every default.
+     */
+    #[Optional('block_binding', nullable: true)]
+    public ?BetaThinkingBlockBinding $blockBinding;
+
+    /**
+     * Controls how thinking content appears in the response. When set to `summarized`, thinking is returned normally. When set to `omitted`, thinking content is redacted but a signature is returned for multi-turn continuity. The default depends on the model; see [Controlling thinking display](https://platform.claude.com/docs/en/build-with-claude/thinking#controlling-thinking-display).
+     *
+     * @var value-of<Display>|null $display
+     */
+    #[Optional(enum: Display::class, nullable: true)]
+    public ?string $display;
+
+    /**
+     * `new BetaThinkingConfigEnabled()` is missing required properties by the API.
+     *
+     * To enforce required parameters use
+     * ```
+     * BetaThinkingConfigEnabled::with(budgetTokens: ...)
+     * ```
+     *
+     * Otherwise ensure the following setters are called
+     *
+     * ```
+     * (new BetaThinkingConfigEnabled())->withBudgetTokens(...)
+     * ```
+     */
+    public function __construct()
+    {
+        $this->initialize();
+    }
+
+    /**
+     * Construct an instance from the required parameters.
+     *
+     * You must use named parameters to construct any parameters with a default value.
+     *
+     * @param BetaThinkingBlockBinding|BetaThinkingBlockBindingShape|null $blockBinding
+     * @param Display|value-of<Display>|null $display
+     */
+    public static function with(
+        int $budgetTokens,
+        BetaThinkingBlockBinding|array|null $blockBinding = null,
+        Display|string|null $display = null,
+    ): self {
+        $self = new self;
+
+        $self['budgetTokens'] = $budgetTokens;
+
+        null !== $blockBinding && $self['blockBinding'] = $blockBinding;
+        null !== $display && $self['display'] = $display;
+
+        return $self;
+    }
+
+    /**
+     * Determines how many tokens Claude can use for its internal reasoning process. Larger budgets can enable more thorough analysis for complex problems, improving response quality.
+     *
+     * Must be ≥1024 and less than `max_tokens`.
+     *
+     * See [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking) for details.
+     */
+    public function withBudgetTokens(int $budgetTokens): self
+    {
+        $self = clone $this;
+        $self['budgetTokens'] = $budgetTokens;
+
+        return $self;
+    }
+
+    /**
+     * @param 'enabled' $type
+     */
+    public function withType(string $type): self
+    {
+        $self = clone $this;
+        $self['type'] = $type;
+
+        return $self;
+    }
+
+    /**
+     * Controls for block binding: what happens when a thinking block this request sends back fails the conversation check. `null`, absent or an empty object means every default.
+     *
+     * @param BetaThinkingBlockBinding|BetaThinkingBlockBindingShape|null $blockBinding
+     */
+    public function withBlockBinding(
+        BetaThinkingBlockBinding|array|null $blockBinding
+    ): self {
+        $self = clone $this;
+        $self['blockBinding'] = $blockBinding;
+
+        return $self;
+    }
+
+    /**
+     * Controls how thinking content appears in the response. When set to `summarized`, thinking is returned normally. When set to `omitted`, thinking content is redacted but a signature is returned for multi-turn continuity. The default depends on the model; see [Controlling thinking display](https://platform.claude.com/docs/en/build-with-claude/thinking#controlling-thinking-display).
+     *
+     * @param Display|value-of<Display>|null $display
+     */
+    public function withDisplay(Display|string|null $display): self
+    {
+        $self = clone $this;
+        $self['display'] = $display;
+
+        return $self;
+    }
+}

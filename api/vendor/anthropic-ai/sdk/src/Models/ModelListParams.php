@@ -1,0 +1,160 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Models;
+
+use Anthropic\Core\Attributes\Optional;
+use Anthropic\Core\Concerns\SdkModel;
+use Anthropic\Core\Concerns\SdkParams;
+use Anthropic\Core\Contracts\BaseModel;
+use Anthropic\Models\ModelListParams\Lifecycle;
+
+/**
+ * List available models.
+ *
+ * The Models API response can be used to determine which models are available for use in the API. More recently released models are listed first.
+ *
+ * @see Anthropic\Services\ModelsService::list()
+ *
+ * @phpstan-type ModelListParamsShape = array{
+ *   afterID?: string|null,
+ *   beforeID?: string|null,
+ *   lifecycle?: list<Lifecycle|value-of<Lifecycle>>|null,
+ *   limit?: int|null,
+ *   workspaceID?: string|null,
+ * }
+ */
+final class ModelListParams implements BaseModel
+{
+    /** @use SdkModel<ModelListParamsShape> */
+    use SdkModel;
+    use SdkParams;
+
+    /**
+     * ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately after this object.
+     */
+    #[Optional]
+    public ?string $afterID;
+
+    /**
+     * ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately before this object.
+     */
+    #[Optional]
+    public ?string $beforeID;
+
+    /**
+     * Filter the list to models in any of the given lifecycle stages (`active`, `deprecated`, or `retired`). Up to 3 values. When omitted, the list contains the `active` and `deprecated` models; `retired` models appear only when `retired` is requested explicitly.
+     *
+     * @var list<value-of<Lifecycle>>|null $lifecycle
+     */
+    #[Optional(list: Lifecycle::class)]
+    public ?array $lifecycle;
+
+    /**
+     * Number of items to return per page.
+     *
+     * Defaults to `20`. Ranges from `1` to `1000`.
+     */
+    #[Optional]
+    public ?int $limit;
+
+    /**
+     * Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     */
+    #[Optional]
+    public ?string $workspaceID;
+
+    public function __construct()
+    {
+        $this->initialize();
+    }
+
+    /**
+     * Construct an instance from the required parameters.
+     *
+     * You must use named parameters to construct any parameters with a default value.
+     *
+     * @param list<Lifecycle|value-of<Lifecycle>>|null $lifecycle
+     */
+    public static function with(
+        ?string $afterID = null,
+        ?string $beforeID = null,
+        ?array $lifecycle = null,
+        ?int $limit = null,
+        ?string $workspaceID = null,
+    ): self {
+        $self = new self;
+
+        null !== $afterID && $self['afterID'] = $afterID;
+        null !== $beforeID && $self['beforeID'] = $beforeID;
+        null !== $lifecycle && $self['lifecycle'] = $lifecycle;
+        null !== $limit && $self['limit'] = $limit;
+        null !== $workspaceID && $self['workspaceID'] = $workspaceID;
+
+        return $self;
+    }
+
+    /**
+     * ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately after this object.
+     */
+    public function withAfterID(string $afterID): self
+    {
+        $self = clone $this;
+        $self['afterID'] = $afterID;
+
+        return $self;
+    }
+
+    /**
+     * ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately before this object.
+     */
+    public function withBeforeID(string $beforeID): self
+    {
+        $self = clone $this;
+        $self['beforeID'] = $beforeID;
+
+        return $self;
+    }
+
+    /**
+     * Filter the list to models in any of the given lifecycle stages (`active`, `deprecated`, or `retired`). Up to 3 values. When omitted, the list contains the `active` and `deprecated` models; `retired` models appear only when `retired` is requested explicitly.
+     *
+     * @param list<Lifecycle|value-of<Lifecycle>> $lifecycle
+     */
+    public function withLifecycle(array $lifecycle): self
+    {
+        $self = clone $this;
+        $self['lifecycle'] = $lifecycle;
+
+        return $self;
+    }
+
+    /**
+     * Number of items to return per page.
+     *
+     * Defaults to `20`. Ranges from `1` to `1000`.
+     */
+    public function withLimit(int $limit): self
+    {
+        $self = clone $this;
+        $self['limit'] = $limit;
+
+        return $self;
+    }
+
+    /**
+     * Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     */
+    public function withWorkspaceID(string $workspaceID): self
+    {
+        $self = clone $this;
+        $self['workspaceID'] = $workspaceID;
+
+        return $self;
+    }
+}

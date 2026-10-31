@@ -1,0 +1,40 @@
+# Buscadores y asistentes de IA: bienvenidos. Queremos que nos lean y nos citen.
+User-agent: *
+Allow: /
+
+# OpenAI (ChatGPT, búsqueda y entrenamiento)
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Anthropic (Claude)
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# Google (Gemini y AI Overviews)
+User-agent: Google-Extended
+Allow: /
+
+# Apple Intelligence
+User-agent: Applebot-Extended
+Allow: /
+
+Sitemap: https://sobtree.com/sitemap-index.xml

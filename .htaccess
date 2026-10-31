@@ -1,0 +1,85 @@
+RewriteEngine On
+
+# No hay página /diagnostico: el bloque del diagnóstico está en la portada, ancla #servicios.
+# Va la primera: la regla de btc.sobtree.com (RewriteRule ^) capturaría esta ruta.
+RewriteRule ^diagnostico/?$ https://sobtree.com/#servicios [R=301,L,NE,NC,QSD]
+
+# Secciones retiradas (tesoro en Bitcoin y principios): todo va a la home.
+# btc.sobtree.com apunta a public_html/btc/, así que también pasa por este fichero.
+RewriteCond %{HTTP_HOST} ^btc\.sobtree\.com$ [NC]
+RewriteRule ^ https://sobtree.com/ [R=301,L]
+RewriteRule ^(btc|principles)(/.*)?$ https://sobtree.com/ [R=301,L,NC]
+
+# URLs del sitio anterior sin equivalente en la web actual (IA para pymes).
+# 410 Gone para que Google las retire. No van a la home: sería un soft 404.
+# - infraestructura-slida-...: entrada antigua sobre Bitcoin. No hay artículo ni sección equivalente.
+# - /invest: página de inversión o tesoro. No es /#servicios ni la calculadora.
+# - /principles-sobtree: la sección de principios se retiró. /principles (regla de arriba)
+#   ya va a la home; este slug no corresponde a ninguna página de ahora.
+# - /index_en.html y /en/index.html: no existe versión en inglés.
+RewriteRule ^infraestructura-slida-para-el-futuro-de-bitcoin/?$ - [G,L,NC]
+RewriteRule ^invest/?$ - [G,L,NC]
+RewriteRule ^principles-sobtree/?$ - [G,L,NC]
+RewriteRule ^index_en\.html$ - [G,L,NC]
+RewriteRule ^en/index\.html$ - [G,L,NC]
+
+# /index.html (portada o cualquier subpágina) sirve el mismo HTML que la URL de
+# directorio y Google lo cuenta como canónica alternativa. THE_REQUEST evita
+# un bucle con el DirectoryIndex interno.
+RewriteCond %{THE_REQUEST} /index\.html[\s?] [NC]
+RewriteRule ^(.*)index\.html$ https://sobtree.com/$1 [R=301,L]
+
+# No hay página /contacto: el formulario está en la portada, ancla #contacto.
+RewriteRule ^contacto/?$ https://sobtree.com/#contacto [R=301,L,NE,NC,QSD]
+
+# Unificar dominio: www.sobtree.com → https://sobtree.com (301, conserva ruta y query)
+# El POST no se redirige: un 301 lo convertiría en GET y se perdería el cuerpo
+# (p. ej. /contact.php enviado desde una página www abierta o en caché).
+RewriteCond %{HTTP_HOST} ^www\.sobtree\.com$ [NC]
+RewriteCond %{REQUEST_METHOD} !=POST
+RewriteRule ^ https://sobtree.com%{REQUEST_URI} [R=301,L]
+
+# Forzar HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# URLs antiguas
+RedirectMatch 301 ^/privacidad\.html$ /privacidad/
+RedirectMatch 301 ^/sitemap\.xml$ /sitemap-index.xml
+
+# Página de error
+ErrorDocument 404 /404.html
+
+# Caché de recursos estáticos
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType image/svg+xml "access plus 30 days"
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType text/plain "access plus 1 hour"
+</IfModule>
+
+# Compresión
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain application/javascript application/json application/xml image/svg+xml
+</IfModule>
+
+# llms.txt en UTF-8
+AddDefaultCharset utf-8
+AddCharset utf-8 .txt
+
+# Cabeceras de seguridad básicas
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
+
+# No servir ficheros del repositorio
+RedirectMatch 404 /\.git
+RedirectMatch 404 /README\.md$
+
+# Iconos y manifiesto
+AddType image/x-icon .ico
+AddType application/manifest+json .webmanifest

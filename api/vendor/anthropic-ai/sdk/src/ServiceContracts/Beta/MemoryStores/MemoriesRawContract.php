@@ -1,0 +1,109 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\ServiceContracts\Beta\MemoryStores;
+
+use Anthropic\Beta\MemoryStores\Memories\ManagedAgentsDeletedMemory;
+use Anthropic\Beta\MemoryStores\Memories\ManagedAgentsMemory;
+use Anthropic\Beta\MemoryStores\Memories\ManagedAgentsMemoryPrefix;
+use Anthropic\Beta\MemoryStores\Memories\MemoryCreateParams;
+use Anthropic\Beta\MemoryStores\Memories\MemoryDeleteParams;
+use Anthropic\Beta\MemoryStores\Memories\MemoryListParams;
+use Anthropic\Beta\MemoryStores\Memories\MemoryRetrieveParams;
+use Anthropic\Beta\MemoryStores\Memories\MemoryUpdateParams;
+use Anthropic\Core\Contracts\BaseResponse;
+use Anthropic\Core\Exceptions\APIException;
+use Anthropic\PageCursor;
+use Anthropic\RequestOptions;
+
+/**
+ * @phpstan-import-type RequestOpts from \Anthropic\RequestOptions
+ */
+interface MemoriesRawContract
+{
+    /**
+     * @api
+     *
+     * @param string $memoryStoreID Path param: The ID of the memory store to create the memory in (`memstore_...`).
+     * @param array<string,mixed>|MemoryCreateParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<ManagedAgentsMemory>
+     *
+     * @throws APIException
+     */
+    public function create(
+        string $memoryStoreID,
+        array|MemoryCreateParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse;
+
+    /**
+     * @api
+     *
+     * @param string $memoryID Path param: The ID of the memory to retrieve (`mem_...`).
+     * @param array<string,mixed>|MemoryRetrieveParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<ManagedAgentsMemory>
+     *
+     * @throws APIException
+     */
+    public function retrieve(
+        string $memoryID,
+        array|MemoryRetrieveParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse;
+
+    /**
+     * @api
+     *
+     * @param string $memoryID Path param: The ID of the memory to update (`mem_...`).
+     * @param array<string,mixed>|MemoryUpdateParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<ManagedAgentsMemory>
+     *
+     * @throws APIException
+     */
+    public function update(
+        string $memoryID,
+        array|MemoryUpdateParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse;
+
+    /**
+     * @api
+     *
+     * @param string $memoryStoreID Path param: The ID of the memory store to list memories from (`memstore_...`).
+     * @param array<string,mixed>|MemoryListParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<PageCursor<ManagedAgentsMemory|ManagedAgentsMemoryPrefix>>
+     *
+     * @throws APIException
+     */
+    public function list(
+        string $memoryStoreID,
+        array|MemoryListParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse;
+
+    /**
+     * @api
+     *
+     * @param string $memoryID Path param: The ID of the memory to delete (`mem_...`).
+     * @param array<string,mixed>|MemoryDeleteParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<ManagedAgentsDeletedMemory>
+     *
+     * @throws APIException
+     */
+    public function delete(
+        string $memoryID,
+        array|MemoryDeleteParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse;
+}

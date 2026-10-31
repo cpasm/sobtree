@@ -1,0 +1,112 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Beta;
+
+enum AnthropicBeta: string
+{
+    case MESSAGE_BATCHES_2024_09_24 = 'message-batches-2024-09-24';
+
+    case PROMPT_CACHING_2024_07_31 = 'prompt-caching-2024-07-31';
+
+    case COMPUTER_USE_2024_10_22 = 'computer-use-2024-10-22';
+
+    case COMPUTER_USE_2025_01_24 = 'computer-use-2025-01-24';
+
+    case PDFS_2024_09_25 = 'pdfs-2024-09-25';
+
+    case TOKEN_COUNTING_2024_11_01 = 'token-counting-2024-11-01';
+
+    case TOKEN_EFFICIENT_TOOLS_2025_02_19 = 'token-efficient-tools-2025-02-19';
+
+    case OUTPUT_128K_2025_02_19 = 'output-128k-2025-02-19';
+
+    case FILES_API_2025_04_14 = 'files-api-2025-04-14';
+
+    case MCP_CLIENT_2025_04_04 = 'mcp-client-2025-04-04';
+
+    case MCP_CLIENT_2025_11_20 = 'mcp-client-2025-11-20';
+
+    case DEV_FULL_THINKING_2025_05_14 = 'dev-full-thinking-2025-05-14';
+
+    case INTERLEAVED_THINKING_2025_05_14 = 'interleaved-thinking-2025-05-14';
+
+    case CODE_EXECUTION_2025_05_22 = 'code-execution-2025-05-22';
+
+    case EXTENDED_CACHE_TTL_2025_04_11 = 'extended-cache-ttl-2025-04-11';
+
+    case CONTEXT_1M_2025_08_07 = 'context-1m-2025-08-07';
+
+    case CONTEXT_MANAGEMENT_2025_06_27 = 'context-management-2025-06-27';
+
+    case MODEL_CONTEXT_WINDOW_EXCEEDED_2025_08_26 = 'model-context-window-exceeded-2025-08-26';
+
+    case SKILLS_2025_10_02 = 'skills-2025-10-02';
+
+    case FAST_MODE_2026_02_01 = 'fast-mode-2026-02-01';
+
+    case OUTPUT_300K_2026_03_24 = 'output-300k-2026-03-24';
+
+    case USER_PROFILES_2026_03_24 = 'user-profiles-2026-03-24';
+
+    case USER_PROFILES_2026_08_18 = 'user-profiles-2026-08-18';
+
+    case USER_PROFILES_2026_09_04 = 'user-profiles-2026-09-04';
+
+    case ADVISOR_TOOL_2026_03_01 = 'advisor-tool-2026-03-01';
+
+    case MANAGED_AGENTS_2026_04_01 = 'managed-agents-2026-04-01';
+
+    case CACHE_DIAGNOSIS_2026_04_07 = 'cache-diagnosis-2026-04-07';
+
+    case DREAMING_2026_04_21 = 'dreaming-2026-04-21';
+
+    case THINKING_TOKEN_COUNT_2026_05_13 = 'thinking-token-count-2026-05-13';
+
+    case SERVER_SIDE_FALLBACK_2026_06_01 = 'server-side-fallback-2026-06-01';
+
+    case SERVER_SIDE_FALLBACK_2026_07_01 = 'server-side-fallback-2026-07-01';
+
+    case FALLBACK_CREDIT_2026_06_01 = 'fallback-credit-2026-06-01';
+
+    case FALLBACK_CREDIT_2026_07_01 = 'fallback-credit-2026-07-01';
+
+    case AGENT_MEMORY_2026_07_22 = 'agent-memory-2026-07-22';
+
+    case MID_CONVERSATION_TOOL_CHANGES_2026_07_01 = 'mid-conversation-tool-changes-2026-07-01';
+
+    case COMPACT_2026_01_12 = 'compact-2026-01-12';
+
+    case COMPUTER_USE_2025_11_24 = 'computer-use-2025-11-24';
+
+    case MCP_TUNNELS_2026_06_22 = 'mcp-tunnels-2026-06-22';
+
+    case STRUCTURED_OUTPUTS_2025_11_13 = 'structured-outputs-2025-11-13';
+
+    case TASK_BUDGETS_2026_03_13 = 'task-budgets-2026-03-13';
+
+    case THINKING_DISPLAY_UPDATES_2026_08_18 = 'thinking-display-updates-2026-08-18';
+
+    case CE_USER_MANAGEMENT_2026_07_13 = 'ce-user-management-2026-07-13';
+
+    case MID_CONVERSATION_OUTPUT_CONFIG_2026_07_01 = 'mid-conversation-output-config-2026-07-01';
+
+    case THINKING_BINDING_CONTROLS_2026_08_01 = 'thinking-binding-controls-2026-08-01';
+
+    case MID_CONVERSATION_SYSTEM_CLEAR_AT_2026_08_21 = 'mid-conversation-system-clear-at-2026-08-21';
+
+    case COMPACT_2026_09_04 = 'compact-2026-09-04';
+
+    case INLINE_TOOLS_2026_09_15 = 'inline-tools-2026-09-15';
+
+    case MCP_CLIENT_2026_09_15 = 'mcp-client-2026-09-15';
+
+    case CE_PLUGINS_2026_09_01 = 'ce-plugins-2026-09-01';
+
+    case SPEND_LIMIT_READS_2026_09_26 = 'spend-limit-reads-2026-09-26';
+
+    case TELEMETRY_DESTINATIONS_2026_08_11 = 'telemetry-destinations-2026-08-11';
+
+    case WEBHOOKS_2026_10_07 = 'webhooks-2026-10-07';
+}

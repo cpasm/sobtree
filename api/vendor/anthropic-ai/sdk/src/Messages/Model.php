@@ -1,0 +1,168 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Messages;
+
+/**
+ * The model that will complete your prompt.
+ * 
+ * See [models](https://docs.anthropic.com/en/docs/models-overview) for additional details and options.
+ *
+ * @see https://platform.claude.com/docs/en/build-with-claude/claude-on-amazon-bedrock AWS Bedrock model identifiers
+ * @see https://platform.claude.com/docs/en/build-with-claude/claude-on-vertex-ai List of supported Vertex AI models
+ * @see https://platform.claude.com/docs/en/build-with-claude/claude-in-microsoft-foundry#api-model-ids-and-deployments List of supported Foundry AI models
+ */
+enum Model: string
+{
+    // Anthropic model identifiers
+
+    /**
+     * Fastest model for high-volume, real-time tasks.
+     */
+    case CLAUDE_HAIKU_5_5 = 'claude-haiku-5-5';
+
+    /**
+     * Efficient model for coding and agents.
+     */
+    case CLAUDE_SONNET_5_5 = 'claude-sonnet-5-5';
+
+    /**
+     * Frontier intelligence for ambitious tasks across coding, scientific discovery, and enterprise workflows.
+     */
+    case CLAUDE_FABLE_5_1 = 'claude-fable-5-1';
+
+    /**
+     * Powerful intelligence for coding, knowledge work, and long-running agents.
+     */
+    case CLAUDE_OPUS_5_5 = 'claude-opus-5-5';
+
+    /**
+     * Our most capable model for cybersecurity and biology research, available through trusted access programs.
+     */
+    case CLAUDE_MYTHOS_5_1 = 'claude-mythos-5-1';
+
+    /**
+     * Efficient model for coding and agents.
+     */
+    case CLAUDE_SONNET_5 = 'claude-sonnet-5';
+
+    /**
+     * Next generation of intelligence for the hardest knowledge work and coding problems.
+     */
+    case CLAUDE_FABLE_5 = 'claude-fable-5';
+
+    /**
+     * Most capable model for cybersecurity and biology research.
+     */
+    case CLAUDE_MYTHOS_5 = 'claude-mythos-5';
+
+    /**
+     * Powerful intelligence for long-running agents and coding.
+     */
+    case CLAUDE_OPUS_5 = 'claude-opus-5';
+
+    /**
+     * Powerful intelligence for long-running agents and coding.
+     */
+    case CLAUDE_OPUS_4_8 = 'claude-opus-4-8';
+
+    /**
+     * Powerful intelligence for long-running agents and coding.
+     */
+    case CLAUDE_OPUS_4_7 = 'claude-opus-4-7';
+
+    /**
+     * New class of intelligence, strongest in coding and cybersecurity.
+     *
+     * @deprecated Will reach end-of-life on June 30, 2026. Please migrate to claude-mythos-5. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information.
+     */
+    case CLAUDE_MYTHOS_PREVIEW = 'claude-mythos-preview';
+
+    /**
+     * Powerful intelligence for long-running agents and coding.
+     */
+    case CLAUDE_OPUS_4_6 = 'claude-opus-4-6';
+
+    /**
+     * Best combination of speed and intelligence.
+     */
+    case CLAUDE_SONNET_4_6 = 'claude-sonnet-4-6';
+
+    case CLAUDE_HAIKU_4_5 = 'claude-haiku-4-5';
+
+    case CLAUDE_HAIKU_4_5_20251001 = 'claude-haiku-4-5-20251001';
+
+    /**
+     * Powerful intelligence for long-running agents and coding.
+     */
+    case CLAUDE_OPUS_4_5 = 'claude-opus-4-5';
+
+    /**
+     * Powerful intelligence for long-running agents and coding.
+     */
+    case CLAUDE_OPUS_4_5_20251101 = 'claude-opus-4-5-20251101';
+
+    /**
+     * High-performance model for agents and coding.
+     *
+     * @deprecated Will reach end-of-life on November 30, 2026. Please migrate to claude-sonnet-5-5. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information.
+     */
+    case CLAUDE_SONNET_4_5 = 'claude-sonnet-4-5';
+
+    /**
+     * High-performance model for agents and coding.
+     *
+     * @deprecated Will reach end-of-life on November 30, 2026. Please migrate to claude-sonnet-5-5. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information.
+     */
+    case CLAUDE_SONNET_4_5_20250929 = 'claude-sonnet-4-5-20250929';
+
+    // AWS Bedrock model identifiers
+
+    /**
+     * @deprecated Will reach end-of-life on Bedrock on March 30, 2027. Please migrate to a newer model. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information.
+     */
+    case BEDROCK_CLAUDE_SONNET_4_5_20250929 = 'anthropic.claude-sonnet-4-5-20250929-v1:0';
+
+    /**
+     * @deprecated Model is deprecated. Migrate to anthropic.claude-sonnet-4-5-20250929-v1:0.
+     */
+    case BEDROCK_CLAUDE_3_7_SONNET_20250219 = 'anthropic.claude-3-7-sonnet-20250219-v1:0';
+
+    case BEDROCK_CLAUDE_OPUS_4_5_20251101 = 'anthropic.claude-opus-4-5-20251101-v1:0';
+
+    case BEDROCK_CLAUDE_OPUS_4_1_20250805 = 'anthropic.claude-opus-4-1-20250805-v1:0';
+
+    case BEDROCK_CLAUDE_HAIKU_4_5_20251001 = 'anthropic.claude-haiku-4-5-20251001-v1:0';
+
+    /**
+     * @deprecated Model is deprecated. Migrate to anthropic.claude-haiku-4-5-20251001-v1:0.
+     */
+    case BEDROCK_CLAUDE_3_5_HAIKU_20241022 = 'anthropic.claude-3-5-haiku-20241022-v1:0';
+
+    case BEDROCK_CLAUDE_3_HAIKU_20240307 = 'anthropic.claude-3-haiku-20240307-v1:0';
+    // Vertex AI model identifiers
+
+    case VERTEX_CLAUDE_OPUS_4_5_20251101 = 'claude-opus-4-5@20251101';
+
+    case VERTEX_CLAUDE_OPUS_4_1_20250805 = 'claude-opus-4-1@20250805';
+
+    /**
+     * @deprecated Will reach end-of-life on Vertex AI on November 30, 2026. Please migrate to a newer model. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information.
+     */
+    case VERTEX_CLAUDE_SONNET_4_5_20250929 = 'claude-sonnet-4-5@20250929';
+
+    /**
+     * @deprecated Model is deprecated. Migrate to claude-sonnet-4@20250514.
+     */
+    case VERTEX_CLAUDE_3_7_SONNET_20250219 = 'claude-3-7-sonnet@20250219';
+
+    case VERTEX_CLAUDE_HAIKU_4_5_20251001 = 'claude-haiku-4-5@20251001';
+
+    /**
+     * @deprecated Model is deprecated. Migrate to claude-haiku-4-5@20251001.
+     */
+    case VERTEX_CLAUDE_3_5_HAIKU_20241022 = 'claude-3-5-haiku@20241022';
+
+    case VERTEX_CLAUDE_3_HAIKU_20240307 = 'claude-3-haiku@20240307';
+}

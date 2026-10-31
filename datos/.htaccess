@@ -1,0 +1,2 @@
+# Datos que solo lee el PHP (lib/contrata.php): nunca accesibles desde la web.
+Require all denied

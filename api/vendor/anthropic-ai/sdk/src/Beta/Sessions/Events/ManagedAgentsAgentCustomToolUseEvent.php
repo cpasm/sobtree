@@ -1,0 +1,184 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Beta\Sessions\Events;
+
+use Anthropic\Core\Attributes\Optional;
+use Anthropic\Core\Attributes\Required;
+use Anthropic\Core\Concerns\SdkModel;
+use Anthropic\Core\Contracts\BaseModel;
+use Anthropic\Core\Conversion\ConstantOf;
+
+/**
+ * Event emitted when the agent calls a custom tool. The session goes idle until the client sends a `user.custom_tool_result` event with the result. The client can send it as soon as this event arrives, without waiting for `session.status_idle`.
+ *
+ * @phpstan-type ManagedAgentsAgentCustomToolUseEventShape = array{
+ *   id: string,
+ *   input: array<string,mixed>,
+ *   name: string,
+ *   processedAt: \DateTimeInterface,
+ *   type: 'agent.custom_tool_use',
+ *   sessionThreadID?: string|null,
+ * }
+ */
+final class ManagedAgentsAgentCustomToolUseEvent implements BaseModel
+{
+    /** @use SdkModel<ManagedAgentsAgentCustomToolUseEventShape> */
+    use SdkModel;
+
+    /** @var 'agent.custom_tool_use' $type */
+    #[Required(type: new ConstantOf('agent.custom_tool_use'))]
+    public string $type = 'agent.custom_tool_use';
+
+    /**
+     * Unique identifier for this event.
+     */
+    #[Required]
+    public string $id;
+
+    /**
+     * Input parameters for the tool call.
+     *
+     * @var array<string,mixed> $input
+     */
+    #[Required(map: 'mixed')]
+    public array $input;
+
+    /**
+     * Name of the custom tool being called.
+     */
+    #[Required]
+    public string $name;
+
+    /**
+     * Timestamp when this tool use was processed.
+     */
+    #[Required('processed_at')]
+    public \DateTimeInterface $processedAt;
+
+    /**
+     * When set, this event was cross-posted from a subagent's thread to surface its custom tool use on the primary thread's stream. Empty on the thread's own events. Informational only: the server routes the matching `user.custom_tool_result` by `custom_tool_use_id`, so clients do not send it back.
+     */
+    #[Optional('session_thread_id', nullable: true)]
+    public ?string $sessionThreadID;
+
+    /**
+     * `new ManagedAgentsAgentCustomToolUseEvent()` is missing required properties by the API.
+     *
+     * To enforce required parameters use
+     * ```
+     * ManagedAgentsAgentCustomToolUseEvent::with(
+     *   id: ..., input: ..., name: ..., processedAt: ...
+     * )
+     * ```
+     *
+     * Otherwise ensure the following setters are called
+     *
+     * ```
+     * (new ManagedAgentsAgentCustomToolUseEvent())
+     *   ->withID(...)
+     *   ->withInput(...)
+     *   ->withName(...)
+     *   ->withProcessedAt(...)
+     * ```
+     */
+    public function __construct()
+    {
+        $this->initialize();
+    }
+
+    /**
+     * Construct an instance from the required parameters.
+     *
+     * You must use named parameters to construct any parameters with a default value.
+     *
+     * @param array<string,mixed> $input
+     */
+    public static function with(
+        string $id,
+        array $input,
+        string $name,
+        \DateTimeInterface $processedAt,
+        ?string $sessionThreadID = null,
+    ): self {
+        $self = new self;
+
+        $self['id'] = $id;
+        $self['input'] = $input;
+        $self['name'] = $name;
+        $self['processedAt'] = $processedAt;
+
+        null !== $sessionThreadID && $self['sessionThreadID'] = $sessionThreadID;
+
+        return $self;
+    }
+
+    /**
+     * Unique identifier for this event.
+     */
+    public function withID(string $id): self
+    {
+        $self = clone $this;
+        $self['id'] = $id;
+
+        return $self;
+    }
+
+    /**
+     * Input parameters for the tool call.
+     *
+     * @param array<string,mixed> $input
+     */
+    public function withInput(array $input): self
+    {
+        $self = clone $this;
+        $self['input'] = $input;
+
+        return $self;
+    }
+
+    /**
+     * Name of the custom tool being called.
+     */
+    public function withName(string $name): self
+    {
+        $self = clone $this;
+        $self['name'] = $name;
+
+        return $self;
+    }
+
+    /**
+     * Timestamp when this tool use was processed.
+     */
+    public function withProcessedAt(\DateTimeInterface $processedAt): self
+    {
+        $self = clone $this;
+        $self['processedAt'] = $processedAt;
+
+        return $self;
+    }
+
+    /**
+     * @param 'agent.custom_tool_use' $type
+     */
+    public function withType(string $type): self
+    {
+        $self = clone $this;
+        $self['type'] = $type;
+
+        return $self;
+    }
+
+    /**
+     * When set, this event was cross-posted from a subagent's thread to surface its custom tool use on the primary thread's stream. Empty on the thread's own events. Informational only: the server routes the matching `user.custom_tool_result` by `custom_tool_use_id`, so clients do not send it back.
+     */
+    public function withSessionThreadID(?string $sessionThreadID): self
+    {
+        $self = clone $this;
+        $self['sessionThreadID'] = $sessionThreadID;
+
+        return $self;
+    }
+}

@@ -1,0 +1,144 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Beta\Sessions\Resources;
+
+use Anthropic\Beta\AnthropicBeta;
+use Anthropic\Core\Attributes\Optional;
+use Anthropic\Core\Attributes\Required;
+use Anthropic\Core\Concerns\SdkModel;
+use Anthropic\Core\Concerns\SdkParams;
+use Anthropic\Core\Contracts\BaseModel;
+
+/**
+ * Update Session Resource.
+ *
+ * @see Anthropic\Services\Beta\Sessions\ResourcesService::update()
+ *
+ * @phpstan-type ResourceUpdateParamsShape = array{
+ *   sessionID: string,
+ *   authorizationToken: string,
+ *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>|null,
+ *   workspaceID?: string|null,
+ * }
+ */
+final class ResourceUpdateParams implements BaseModel
+{
+    /** @use SdkModel<ResourceUpdateParamsShape> */
+    use SdkModel;
+    use SdkParams;
+
+    #[Required]
+    public string $sessionID;
+
+    /**
+     * New authorization token for the resource. Currently only `github_repository` resources support token rotation.
+     */
+    #[Required('authorization_token')]
+    public string $authorizationToken;
+
+    /**
+     * This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header.
+     *
+     * @var list<string|value-of<AnthropicBeta>>|null $betas
+     */
+    #[Optional(list: AnthropicBeta::class)]
+    public ?array $betas;
+
+    /**
+     * Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     */
+    #[Optional]
+    public ?string $workspaceID;
+
+    /**
+     * `new ResourceUpdateParams()` is missing required properties by the API.
+     *
+     * To enforce required parameters use
+     * ```
+     * ResourceUpdateParams::with(sessionID: ..., authorizationToken: ...)
+     * ```
+     *
+     * Otherwise ensure the following setters are called
+     *
+     * ```
+     * (new ResourceUpdateParams())->withSessionID(...)->withAuthorizationToken(...)
+     * ```
+     */
+    public function __construct()
+    {
+        $this->initialize();
+    }
+
+    /**
+     * Construct an instance from the required parameters.
+     *
+     * You must use named parameters to construct any parameters with a default value.
+     *
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>>|null $betas
+     */
+    public static function with(
+        string $sessionID,
+        string $authorizationToken,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+    ): self {
+        $self = new self;
+
+        $self['sessionID'] = $sessionID;
+        $self['authorizationToken'] = $authorizationToken;
+
+        null !== $betas && $self['betas'] = $betas;
+        null !== $workspaceID && $self['workspaceID'] = $workspaceID;
+
+        return $self;
+    }
+
+    public function withSessionID(string $sessionID): self
+    {
+        $self = clone $this;
+        $self['sessionID'] = $sessionID;
+
+        return $self;
+    }
+
+    /**
+     * New authorization token for the resource. Currently only `github_repository` resources support token rotation.
+     */
+    public function withAuthorizationToken(string $authorizationToken): self
+    {
+        $self = clone $this;
+        $self['authorizationToken'] = $authorizationToken;
+
+        return $self;
+    }
+
+    /**
+     * This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header.
+     *
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas
+     */
+    public function withBetas(array $betas): self
+    {
+        $self = clone $this;
+        $self['betas'] = $betas;
+
+        return $self;
+    }
+
+    /**
+     * Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     */
+    public function withWorkspaceID(string $workspaceID): self
+    {
+        $self = clone $this;
+        $self['workspaceID'] = $workspaceID;
+
+        return $self;
+    }
+}

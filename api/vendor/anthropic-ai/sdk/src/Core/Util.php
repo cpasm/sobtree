@@ -1,0 +1,818 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Core;
+
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamFactoryInterface;
+use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\UriInterface;
+
+/**
+ * @phpstan-type SSEvent = array{
+ *   event?: string|null, data?: string|null, id?: string|null, retry?: int|null
+ * }
+ */
+final class Util
+{
+    public const BUF_SIZE = 8192;
+
+    public const JSON_ENCODE_FLAGS = JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+
+    public const JSON_CONTENT_TYPE = '/^application\/(?:vnd(?:.[^.]+)*+)?json(?!l)/';
+
+    public const JSONL_CONTENT_TYPE = '/^application\/(:?x-(?:n|l)djson)|(:?(?:x-)?jsonl)/';
+
+    public const STREAMING_CONTENT_TYPE = ['/^text\/event-stream/', self::JSONL_CONTENT_TYPE];
+
+    /**
+     * Matches `scheme://...` and `//...`, the only URI references that carry an authority (RFC 3986 section 3).
+     *
+     * parse_url() is trusted only on strings this matches, because it reads `host:8080/path` and `a/b:80/c` as a host and port.
+     */
+    private const URI_WITH_AUTHORITY = '#^([A-Za-z][A-Za-z0-9+.-]*:)?//#';
+
+    public static function getenv(string $key): ?string
+    {
+        if (array_key_exists($key, array: $_ENV)) {
+            if (!is_string($value = $_ENV[$key])) {
+                throw new \InvalidArgumentException("Environment variable {$key} must be set and a string.");
+            }
+
+            return $value;
+        }
+
+        if (is_string($value = getenv($key))) {
+            return $value;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public static function get_object_vars(object $object): array
+    {
+        /** @var array<string,mixed> */
+        return get_object_vars($object);
+    }
+
+    public static function machtype(): string
+    {
+        $arch = php_uname('m');
+
+        return match (true) {
+            str_contains($arch, 'aarch64'), str_contains($arch, 'arm64') => 'arm64',
+            str_contains($arch, 'x86_64'), str_contains($arch, 'amd64') => 'x64',
+            str_contains($arch, 'i386'), str_contains($arch, 'i686') => 'x32',
+            str_contains($arch, 'arm') => 'arm',
+            default => 'unknown',
+        };
+    }
+
+    public static function ostype(): string
+    {
+        return match ($os = strtolower(PHP_OS_FAMILY)) {
+            'linux' => 'Linux',
+            'darwin' => 'MacOS',
+            'windows' => 'Windows',
+            'solaris' => 'Solaris',
+            // @phpstan-ignore-next-line match.alwaysFalse
+            'bsd', 'freebsd', 'openbsd' => 'BSD',
+            default => "Other:{$os}",
+        };
+    }
+
+    /**
+     * @template T
+     *
+     * @param array<string,T> $array
+     * @param array<string,string> $map
+     *
+     * @return array<string,T>
+     */
+    public static function array_transform_keys(array $array, array $map): array
+    {
+        $acc = [];
+        foreach ($array as $key => $value) {
+            $acc[$map[$key] ?? $key] = $value;
+        }
+
+        return $acc;
+    }
+
+    public static function strVal(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if (is_object($value) && is_a($value, class: \DateTimeInterface::class)) {
+            return date_format($value, format: \DateTimeInterface::RFC3339);
+        }
+
+        // @phpstan-ignore-next-line argument.type
+        return strval($value);
+    }
+
+    /**
+     * @param callable $callback
+     */
+    public static function mapRecursive(mixed $callback, mixed $value): mixed
+    {
+        $mapped = match (true) {
+            is_array($value) => array_map(static fn ($v) => self::mapRecursive($callback, value: $v), $value),
+            default => $value,
+        };
+
+        return $callback($mapped);
+    }
+
+    public static function removeNulls(mixed $value): mixed
+    {
+        $mapped = self::mapRecursive(
+            static fn ($vs) => is_array($vs) && !array_is_list($vs) ? array_filter($vs, callback: static fn ($v) => !is_null($v)) : $vs,
+            value: $value
+        );
+
+        return $mapped;
+    }
+
+    /**
+     * @param string|int|list<string|int>|callable $key
+     */
+    public static function dig(
+        mixed $array,
+        string|int|array|callable $key
+    ): mixed {
+        if (is_callable($key)) {
+            return $key($array);
+        }
+
+        if (is_array($array)) {
+            if ((is_string($key) || is_int($key)) && array_key_exists($key, array: $array)) {
+                return $array[$key];
+            }
+
+            if (is_array($key) && !empty($key)) {
+                if (array_key_exists($fst = $key[0], array: $array)) {
+                    return self::dig($array[$fst], key: array_slice($key, 1));
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Merges extra body params into a request body, with the extras winning
+     * on key collisions (mirroring how extraHeaders merge into headers).
+     *
+     * At this layer a JSON body can arrive in several shapes: builders and
+     * literals produce associative arrays, `json_decode` round-trips produce
+     * stdClass, and some endpoints send lists, scalars, streams, or no body
+     * at all. The extras can likewise be a map-shaped array or stdClass.
+     * Both sides are normalized to arrays before merging.
+     *
+     * Only map-shaped bodies are merged into; a null body is replaced by the
+     * extras, and lists, scalars, and streams pass through untouched — there
+     * is nothing to merge into. Empty or list-shaped extras are a no-op.
+     */
+    public static function mergeBody(mixed $body, mixed $extraBody): mixed
+    {
+        if (null === $extraBody || [] === $extraBody) {
+            return $body;
+        }
+
+        $extra = $extraBody instanceof \stdClass ? get_object_vars($extraBody) : $extraBody;
+        if (!is_array($extra) || array_is_list($extra)) {
+            return $body;
+        }
+
+        $base = $body instanceof \stdClass ? get_object_vars($body) : $body;
+        if (is_null($base)) {
+            return $extra;
+        }
+
+        // An empty array is map-shaped too: a body with no fields set still takes the extras.
+        // array_replace, not spread: spread renumbers integer keys, and PHP stores numeric-string keys as integers.
+        if (is_array($base) && ([] === $base || !array_is_list($base))) {
+            return array_replace($base, $extra);
+        }
+
+        return $body;
+    }
+
+    /**
+     * @param string|list<string> $path
+     */
+    public static function parsePath(string|array $path): string
+    {
+        if (is_string($path)) {
+            return $path;
+        }
+
+        if (empty($path)) {
+            return '';
+        }
+
+        [$template] = $path;
+        $mapped = array_map(static fn ($s) => rawurlencode(self::strVal($s)), array: array_slice($path, 1));
+        $parsed = sprintf($template, ...$mapped);
+
+        foreach ($mapped as $segment) {
+            if ('.' === $segment || '..' === $segment) {
+                throw new \InvalidArgumentException(sprintf('The path "%s" has the dot segment "%s", which would send the request to a different URL. A path parameter cannot be "." or "..".', $parsed, $segment));
+            }
+            if ('' === $segment) {
+                throw new \InvalidArgumentException(sprintf('The path "%s" has an empty path parameter, which would send the request to a different URL. A path parameter cannot be empty.', $parsed));
+            }
+        }
+
+        return $parsed;
+    }
+
+    /**
+     * @param array<string,mixed> $query
+     */
+    public static function joinUri(
+        UriInterface $base,
+        string $path,
+        array $query = []
+    ): UriInterface {
+        // Only a full URL such as `https://host/x` switches to another host. Every other path, `/x` and `//host/x` included, is appended to the base URL's path.
+        if (!str_starts_with($path, '/') && preg_match(self::URI_WITH_AUTHORITY, $path)) {
+            $parsed = parse_url($path) ?: [];
+            if ($scheme = $parsed['scheme'] ?? null) {
+                $base = $base->withScheme($scheme);
+            }
+            if ($host = $parsed['host'] ?? null) {
+                $base = $base->withHost($host);
+            }
+            if ($port = $parsed['port'] ?? null) {
+                $base = $base->withPort($port);
+            }
+            if (($user = $parsed['user'] ?? null) || ($pass = $parsed['pass'] ?? null)) {
+                $base = $base->withUserInfo($user ?? '', $pass ?? null);
+            }
+            [$path, $pathQuery] = [$parsed['path'] ?? '', $parsed['query'] ?? ''];
+        } else {
+            [$path, $pathQuery] = explode('?', explode('#', ltrim($path, '/'), 2)[0], 2) + [1 => ''];
+        }
+
+        if ('' !== $path) {
+            $base = str_starts_with($path, '/') ? $base->withPath($path) : $base->withPath(rtrim($base->getPath(), '/').'/'.$path);
+        }
+
+        // parse_str() rewrites keys such as `page.token`, so a query with nothing to merge into it is kept as written.
+        if ('' === $base->getQuery() && [] === $query) {
+            return $base->withQuery($pathQuery);
+        }
+
+        [$q1, $q2] = [[], []];
+        parse_str($base->getQuery(), $q1);
+        parse_str($pathQuery, $q2);
+
+        /** @var array<string,mixed> */
+        $mergedQuery = array_merge_recursive($q1, $q2, $query);
+
+        return $base->withQuery(self::encodeQuery($mergedQuery));
+    }
+
+    /**
+     * Resolves a URI reference (e.g. a Location header) against a base URI per RFC 3986 section 5.2: an absolute reference replaces every component, a relative one inherits only what it does not redefine. A reference with a scheme but no `//` authority (`mailto:x`, and equally `host:8080/path`) is rejected, since it names no host to send a request to.
+     */
+    public static function resolveUri(
+        UriInterface $base,
+        string $reference
+    ): UriInterface {
+        if (preg_match(self::URI_WITH_AUTHORITY, $reference)) {
+            $ref = parse_url($reference);
+            if (false === $ref) {
+                throw new \InvalidArgumentException('Unable to parse URI reference');
+            }
+
+            // Only the scheme may be inherited: userinfo, host, port, path and query all come from the reference.
+            return $base
+                ->withScheme($ref['scheme'] ?? $base->getScheme())
+                ->withUserInfo($ref['user'] ?? '', $ref['pass'] ?? null)
+                ->withHost($ref['host'] ?? '')
+                ->withPort($ref['port'] ?? null)
+                ->withPath(self::removeDotSegments($ref['path'] ?? ''))
+                ->withQuery($ref['query'] ?? '')
+                ->withFragment($ref['fragment'] ?? '')
+            ;
+        }
+
+        // RFC 3986 appendix B: a ':' before any '/', '?' or '#' ends a scheme, so this is not a relative path.
+        if (preg_match('~^[^:/?#]+:~', $reference)) {
+            throw new \InvalidArgumentException('URI reference has a scheme without a network authority');
+        }
+
+        [$rest, $fragment] = explode('#', $reference, 2) + [1 => ''];
+        [$path, $query] = explode('?', $rest, 2) + [1 => ''];
+        if ('' === $path) {
+            // A query- or fragment-only reference keeps the base path; only an empty one also keeps the base query.
+            $target = $base->withQuery('' === $rest ? $base->getQuery() : $query);
+        } else {
+            if (!str_starts_with($path, '/')) {
+                $basePath = $base->getPath();
+                $slash = strrpos($basePath, '/');
+                $path = '' !== $base->getAuthority() && '' === $basePath
+                    ? '/'.$path
+                    : (false === $slash ? $path : substr($basePath, 0, $slash + 1).$path);
+            }
+            // A reference with its own path never inherits the base query.
+            $target = $base->withPath(self::removeDotSegments($path))->withQuery($query);
+        }
+
+        return $target->withFragment($fragment);
+    }
+
+    public static function isStreamingRequest(RequestInterface $request): bool
+    {
+        $accept = $request->getHeaderLine('Accept');
+
+        return !empty(array_filter(
+            self::STREAMING_CONTENT_TYPE,
+            static fn (string $pattern) => (bool) preg_match($pattern, subject: $accept),
+        ));
+    }
+
+    /**
+     * @param array<string,string|int|list<string|int>|null> $headers
+     */
+    public static function withSetHeaders(
+        RequestInterface $req,
+        array $headers
+    ): RequestInterface {
+        foreach ($headers as $name => $value) {
+            if (is_null($value)) {
+                /** @var RequestInterface */
+                $req = $req->withoutHeader($name);
+            } elseif ([] !== $value) {
+                $value = is_array($value) ? implode(',', array_map(static fn ($v) => self::strVal($v), array: $value)) : self::strVal($value);
+
+                /** @var RequestInterface */
+                $req = $req->withHeader($name, $value);
+            }
+        }
+
+        return $req;
+    }
+
+    /**
+     * @return \Iterator<string>
+     */
+    public static function streamIterator(StreamInterface $stream): \Iterator
+    {
+        if (!$stream->isReadable()) {
+            return;
+        }
+
+        // PHP's HTTP wrapper (http:// and https://) holds a read of N bytes from a chunked response until all N arrive,
+        // so take one byte and then only what is already buffered.
+        $http = 'http' === $stream->getMetadata('wrapper_type');
+
+        // Closes the stream once this generator ends or is destroyed. Not a `finally`: PHP 8.3.30+, 8.4.17+ and 8.5.2+
+        // can crash when they destroy a suspended generator that has one while an exception is in flight.
+        $closer = new class($stream) {
+            public function __construct(private StreamInterface $stream) {}
+
+            public function __destruct()
+            {
+                // No longer readable: something else has closed it.
+                if ($this->stream->isReadable()) {
+                    $this->stream->close();
+                }
+            }
+        };
+
+        while (!$stream->eof()) {
+            $chunk = $stream->read($http ? 1 : self::BUF_SIZE);
+            $buffered = $http ? $stream->getMetadata('unread_bytes') : 0;
+            if (is_int($buffered) && $buffered > 0) {
+                $chunk .= $stream->read($buffered);
+            }
+
+            yield $chunk;
+        }
+    }
+
+    /**
+     * @param bool|int|float|string|resource|\Traversable<mixed,>|array<string,mixed>|null $body
+     */
+    public static function withSetBody(
+        StreamFactoryInterface $factory,
+        RequestInterface $req,
+        mixed $body
+    ): RequestInterface {
+        if ($body instanceof StreamInterface) {
+            return $req->withBody($body);
+        }
+
+        $contentType = $req->getHeaderLine('Content-Type');
+        if (preg_match(self::JSON_CONTENT_TYPE, $contentType)) {
+            if (is_array($body) || is_object($body)) {
+                $encoded = json_encode($body, flags: self::JSON_ENCODE_FLAGS);
+                $stream = $factory->createStream($encoded);
+
+                return $req->withBody($stream);
+            }
+        }
+
+        if (preg_match('/^multipart\/form-data/', $contentType)) {
+            [$boundary, $gen] = self::encodeMultipartStreaming($body);
+            $encoded = implode('', iterator_to_array($gen, preserve_keys: false));
+            $stream = $factory->createStream($encoded);
+            // A retried request already carries the previous attempt's boundary; replace it rather than appending a second one.
+            $contentType = preg_replace('/;\s*boundary=[^;]*/i', '', $contentType) ?? $contentType;
+
+            return $req->withHeader('Content-Type', "{$contentType}; boundary={$boundary}")->withBody($stream);
+        }
+
+        if (is_resource($body)) {
+            $stream = $factory->createStreamFromResource($body);
+
+            return $req->withBody($stream);
+        }
+
+        if (is_string($body)) {
+            $stream = $factory->createStream($body);
+
+            return $req->withBody($stream);
+        }
+
+        return $req;
+    }
+
+    /**
+     * @internal
+     *
+     * Whether any file part in the body reads from a stream that cannot seek back, so the body can be encoded and sent only once
+     */
+    public static function hasNonSeekableFilePart(mixed $body): bool
+    {
+        if ($body instanceof FileParam) {
+            return !is_string($body->data) && !stream_get_meta_data($body->data)['seekable'];
+        }
+        // The multipart encoder casts an object body to an array of its entries, so look inside objects the same way.
+        if (is_object($body)) {
+            $body = (array) $body;
+        }
+        if (is_array($body)) {
+            foreach ($body as $val) {
+                if (self::hasNonSeekableFilePart($val)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param \Iterator<string> $stream
+     *
+     * @return \Iterator<string>
+     */
+    public static function decodeLines(\Iterator $stream): \Iterator
+    {
+        $buf = '';
+        foreach ($stream as $chunk) {
+            $buf .= $chunk;
+            while (($pos = strpos($buf, "\n")) !== false) {
+                yield substr($buf, 0, $pos);
+                $buf = substr($buf, $pos + 1);
+            }
+        }
+        if ('' !== $buf) {
+            yield $buf;
+        }
+    }
+
+    /**
+     * @param \Iterator<string> $lines
+     *
+     * @return \Generator<SSEvent>
+     */
+    public static function decodeSSE(\Iterator $lines): \Generator
+    {
+        $blank = ['event' => null, 'data' => null, 'id' => null, 'retry' => null];
+        $acc = [];
+
+        foreach ($lines as $line) {
+            $line = rtrim($line);
+            if ('' === $line) {
+                if (empty($acc)) {
+                    continue;
+                }
+
+                yield [...$blank, ...$acc];
+                $acc = [];
+            }
+
+            if (str_starts_with($line, ':')) {
+                continue;
+            }
+
+            $matches = [];
+            if (preg_match('/^([^:]+):\s?(.*)$/', $line, $matches)) {
+                [, $field, $value] = $matches;
+
+                switch ($field) {
+                    case 'event':
+                        $acc['event'] = $value;
+
+                        break;
+
+                    case 'data':
+                        if (isset($acc['data'])) {
+                            $acc['data'] .= "\n".$value;
+                        } else {
+                            $acc['data'] = $value;
+                        }
+
+                        break;
+
+                    case 'id':
+                        $acc['id'] = $value;
+
+                        break;
+
+                    case 'retry':
+                        $acc['retry'] = (int) $value;
+
+                        break;
+                }
+            }
+        }
+
+        if (!empty($acc)) {
+            yield [...$blank, ...$acc];
+        }
+    }
+
+    public static function decodeJson(string $json): mixed
+    {
+        return json_decode($json, associative: true, flags: JSON_THROW_ON_ERROR);
+    }
+
+    public static function decodeContent(ResponseInterface $rsp): mixed
+    {
+        if (204 == $rsp->getStatusCode()) {
+            return null;
+        }
+
+        $content_type = $rsp->getHeaderLine('Content-Type');
+        $body = $rsp->getBody();
+
+        if (preg_match(self::JSON_CONTENT_TYPE, subject: $content_type)) {
+            $json = $body->getContents();
+
+            return self::decodeJson($json);
+        }
+
+        if (preg_match(self::JSONL_CONTENT_TYPE, subject: $content_type)) {
+            $it = self::streamIterator($body);
+            $lines = self::decodeLines($it);
+
+            return self::decodeJsonLines($lines);
+        }
+
+        if (str_contains($content_type, needle: 'text/event-stream')) {
+            $it = self::streamIterator($body);
+            $lines = self::decodeLines($it);
+
+            return self::decodeSSE($lines);
+        }
+
+        return self::streamIterator($body);
+    }
+
+    public static function prettyEncodeJson(mixed $obj): string
+    {
+        return json_encode($obj, flags: JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?: '';
+    }
+
+    /**
+     * @param array<string,mixed> $query
+     */
+    private static function encodeQuery(array $query): string
+    {
+        $pairs = [];
+        foreach ($query as $key => $val) {
+            self::writeQueryElement($pairs, key: $key, val: $val);
+        }
+
+        return implode('&', array_map(static fn ($pair) => rawurlencode($pair[0]).'='.rawurlencode($pair[1]), array: $pairs));
+    }
+
+    /**
+     * @param list<array{string, string}> $pairs
+     */
+    private static function writeQueryElement(
+        array &$pairs,
+        string $key,
+        mixed $val
+    ): void {
+        if (is_array($val) && !array_is_list($val)) {
+            foreach ($val as $name => $item) {
+                self::writeQueryElement($pairs, key: "{$key}[{$name}]", val: $item);
+            }
+        } elseif (is_array($val)) {
+            foreach ($val as $item) {
+                self::writeQueryElement($pairs, key: "{$key}[]", val: $item);
+            }
+        } elseif (!is_null($val)) {
+            $pairs[] = [$key, self::strVal($val)];
+        }
+    }
+
+    private static function removeDotSegments(string $path): string
+    {
+        if ('' === $path) {
+            return '';
+        }
+
+        $out = [];
+        $segments = explode('/', $path);
+        foreach ($segments as $segment) {
+            if ('..' === $segment) {
+                array_pop($out);
+            } elseif ('.' !== $segment) {
+                $out[] = $segment;
+            }
+        }
+
+        $result = implode('/', $out);
+        $last = end($segments);
+        if (str_starts_with($path, '/') && !str_starts_with($result, '/')) {
+            return '/'.$result;
+        }
+
+        // "a/b/." and "a/b/.." name directories, so keep the trailing slash.
+        return '' !== $result && ('.' === $last || '..' === $last) ? $result.'/' : $result;
+    }
+
+    /**
+     * @param list<callable> $closing
+     *
+     * @return \Generator<string>
+     */
+    private static function writeMultipartContent(
+        mixed $val,
+        array &$closing,
+        ?string $contentType = null
+    ): \Generator {
+        $contentLine = "Content-Type: %s\r\n\r\n";
+
+        if ($val instanceof FileParam) {
+            $ct = $val->contentType;
+
+            yield sprintf($contentLine, $ct);
+            $data = $val->data;
+            if (is_string($data)) {
+                yield $data;
+            } else { // resource
+                $seekable = stream_get_meta_data($data)['seekable'];
+                if (!$seekable && feof($data)) {
+                    // A pipe or socket that an earlier request drained would silently upload an empty part.
+                    throw new \InvalidArgumentException('The file body is a non-seekable stream that was already consumed; pass a fresh stream, a seekable stream, or the contents as a string.');
+                }
+                $start = ftell($data);
+                while (!feof($data)) {
+                    $read = fread($data, length: self::BUF_SIZE);
+                    if (false !== $read && '' !== $read) {
+                        yield $read;
+                    }
+                }
+                // Put the cursor back so a retried request re-encodes the same bytes rather than an empty part.
+                if ($seekable && is_int($start)) {
+                    fseek($data, offset: $start);
+                }
+            }
+        } elseif (is_string($val) || is_numeric($val) || is_bool($val)) {
+            yield sprintf($contentLine, $contentType ?? 'text/plain');
+
+            yield self::strVal($val);
+        } else {
+            yield sprintf($contentLine, $contentType ?? 'application/json');
+
+            yield json_encode($val, flags: self::JSON_ENCODE_FLAGS);
+        }
+
+        yield "\r\n";
+    }
+
+    /**
+     * @param list<callable> $closing
+     *
+     * @return \Generator<string>
+     */
+    private static function writeMultipartChunk(
+        string $boundary,
+        ?string $key,
+        mixed $val,
+        array &$closing
+    ): \Generator {
+        yield "--{$boundary}\r\n";
+
+        yield 'Content-Disposition: form-data';
+
+        if (!is_null($key)) {
+            $name = str_replace(['"', "\r", "\n"], replace: '', subject: $key);
+
+            yield "; name=\"{$name}\"";
+        }
+
+        // File uploads require a filename in the Content-Disposition header,
+        // e.g. `Content-Disposition: form-data; name="file"; filename="data.csv"`
+        // Without this, many servers will reject the upload with a 400.
+        if ($val instanceof FileParam) {
+            $filename = str_replace(['"', "\r", "\n"], replace: '', subject: $val->filename);
+
+            yield "; filename=\"{$filename}\"";
+        }
+
+        yield "\r\n";
+        foreach (self::writeMultipartContent($val, closing: $closing) as $chunk) {
+            yield $chunk;
+        }
+    }
+
+    /**
+     * Expands list arrays into separate multipart parts, applying the configured array key format.
+     *
+     * @param list<callable> $closing
+     *
+     * @return \Generator<string>
+     */
+    private static function writeMultipartField(
+        string $boundary,
+        ?string $key,
+        mixed $val,
+        array &$closing
+    ): \Generator {
+        if (is_array($val) && array_is_list($val)) {
+            foreach ($val as $item) {
+                yield from self::writeMultipartField(boundary: $boundary, key: $key.'[]', val: $item, closing: $closing);
+            }
+        } else {
+            yield from self::writeMultipartChunk(boundary: $boundary, key: $key, val: $val, closing: $closing);
+        }
+    }
+
+    /**
+     * @param bool|int|float|string|resource|\Traversable<mixed,>|array<string,mixed>|null $body
+     *
+     * @return array{string, \Generator<string>}
+     */
+    private static function encodeMultipartStreaming(mixed $body): array
+    {
+        $boundary = rtrim(strtr(base64_encode(random_bytes(60)), '+/', '-_'), '=');
+        $gen = (function () use ($boundary, $body) {
+            $closing = [];
+
+            try {
+                if (is_array($body) || is_object($body)) {
+                    foreach ((array) $body as $key => $val) {
+                        yield from static::writeMultipartField(boundary: $boundary, key: $key, val: $val, closing: $closing);
+                    }
+                } else {
+                    yield from static::writeMultipartField(boundary: $boundary, key: null, val: $body, closing: $closing);
+                }
+
+                yield "--{$boundary}--\r\n";
+            } finally {
+                foreach ($closing as $c) {
+                    $c();
+                }
+            }
+        })();
+
+        return [$boundary, $gen];
+    }
+
+    /**
+     * A method and not a closure: PHP 8.4+ holds what a closure uses until its generator is freed,
+     * so closing the generator would leave the stream open.
+     *
+     * @param \Iterator<string> $lines
+     *
+     * @return \Generator<mixed>
+     */
+    private static function decodeJsonLines(\Iterator $lines): \Generator
+    {
+        // Out of the parameter, so that the trace of a decoding error does not keep the stream open.
+        $rows = $lines;
+        unset($lines);
+
+        foreach ($rows as $row) {
+            yield self::decodeJson($row);
+        }
+    }
+}
