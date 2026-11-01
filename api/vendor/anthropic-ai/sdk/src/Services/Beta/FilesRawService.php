@@ -1,0 +1,282 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Services\Beta;
+
+use Anthropic\Beta\AnthropicBeta;
+use Anthropic\Beta\Files\BetaDeletedFile;
+use Anthropic\Beta\Files\BetaFileMetadata;
+use Anthropic\Beta\Files\FileDeleteParams;
+use Anthropic\Beta\Files\FileDownloadParams;
+use Anthropic\Beta\Files\FileListParams;
+use Anthropic\Beta\Files\FileRetrieveMetadataParams;
+use Anthropic\Beta\Files\FileUploadParams;
+use Anthropic\Client;
+use Anthropic\Core\Contracts\BaseResponse;
+use Anthropic\Core\Exceptions\APIException;
+use Anthropic\Core\FileParam;
+use Anthropic\Core\Implementation\ApiCallInfo;
+use Anthropic\Core\Util;
+use Anthropic\PageCursor;
+use Anthropic\RequestOptions;
+use Anthropic\ServiceContracts\Beta\FilesRawContract;
+
+/**
+ * @phpstan-import-type RequestOpts from \Anthropic\RequestOptions
+ */
+final class FilesRawService implements FilesRawContract
+{
+    // @phpstan-ignore-next-line
+    /**
+     * @internal
+     */
+    public function __construct(private Client $client) {}
+
+    /**
+     * @api
+     *
+     * List Files
+     *
+     * @param array{
+     *   ids?: list<string>|null,
+     *   limit?: int,
+     *   page?: string|null,
+     *   scopeID?: string,
+     *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>,
+     *   workspaceID?: string,
+     * }|FileListParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<PageCursor<BetaFileMetadata>>
+     *
+     * @throws APIException
+     */
+    public function list(
+        array|FileListParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse {
+        [$parsed, $options] = FileListParams::parseRequest(
+            $params,
+            $requestOptions,
+        );
+        $query_params = array_flip(['ids', 'limit', 'page', 'scopeID']);
+
+        /** @var array<string,string> */
+        $header_params = array_diff_key($parsed, $query_params);
+
+        // @phpstan-ignore-next-line return.type
+        return $this->client->request(
+            method: 'get',
+            path: 'v1/files?beta=true',
+            query: Util::array_transform_keys(
+                array_intersect_key($parsed, $query_params),
+                ['scopeID' => 'scope_id']
+            ),
+            headers: Util::array_transform_keys(
+                $header_params,
+                [
+                    'betas' => 'anthropic-beta', 'workspaceID' => 'anthropic-workspace-id',
+                ],
+            ),
+            options: $options->withApiCall(new ApiCallInfo(
+                name: 'anthropic.files.list',
+                route: '/v1/files',
+                query: ['ids', 'limit', 'page', 'scope_id'],
+            )),
+            convert: BetaFileMetadata::class,
+            page: PageCursor::class,
+        );
+    }
+
+    /**
+     * @api
+     *
+     * Delete File
+     *
+     * @param string $fileID ID of the File
+     * @param array{
+     *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>,
+     *   workspaceID?: string,
+     * }|FileDeleteParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<BetaDeletedFile>
+     *
+     * @throws APIException
+     */
+    public function delete(
+        string $fileID,
+        array|FileDeleteParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse {
+        [$parsed, $options] = FileDeleteParams::parseRequest(
+            $params,
+            $requestOptions,
+        );
+
+        // @phpstan-ignore-next-line return.type
+        return $this->client->request(
+            method: 'delete',
+            path: ['v1/files/%1$s?beta=true', $fileID],
+            headers: Util::array_transform_keys(
+                $parsed,
+                [
+                    'betas' => 'anthropic-beta', 'workspaceID' => 'anthropic-workspace-id',
+                ],
+            ),
+            options: $options->withApiCall(new ApiCallInfo(
+                name: 'anthropic.files.delete',
+                route: '/v1/files/{file_id}',
+                attributes: ['anthropic.file.id' => $fileID],
+            )),
+            convert: BetaDeletedFile::class,
+        );
+    }
+
+    /**
+     * @api
+     *
+     * Download File
+     *
+     * @param string $fileID ID of the File
+     * @param array{
+     *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>,
+     *   workspaceID?: string,
+     * }|FileDownloadParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<string>
+     *
+     * @throws APIException
+     */
+    public function download(
+        string $fileID,
+        array|FileDownloadParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse {
+        [$parsed, $options] = FileDownloadParams::parseRequest(
+            $params,
+            $requestOptions,
+        );
+
+        // @phpstan-ignore-next-line return.type
+        return $this->client->request(
+            method: 'get',
+            path: ['v1/files/%1$s/content?beta=true', $fileID],
+            headers: Util::array_transform_keys(
+                ['Accept' => 'application/binary', ...$parsed],
+                [
+                    'betas' => 'anthropic-beta', 'workspaceID' => 'anthropic-workspace-id',
+                ],
+            ),
+            options: $options->withApiCall(new ApiCallInfo(
+                name: 'anthropic.files.download',
+                route: '/v1/files/{file_id}/content',
+                attributes: ['anthropic.file.id' => $fileID],
+            )),
+            convert: 'string',
+        );
+    }
+
+    /**
+     * @api
+     *
+     * Get File Metadata
+     *
+     * @param string $fileID ID of the File
+     * @param array{
+     *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>,
+     *   workspaceID?: string,
+     * }|FileRetrieveMetadataParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<BetaFileMetadata>
+     *
+     * @throws APIException
+     */
+    public function retrieveMetadata(
+        string $fileID,
+        array|FileRetrieveMetadataParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse {
+        [$parsed, $options] = FileRetrieveMetadataParams::parseRequest(
+            $params,
+            $requestOptions,
+        );
+
+        // @phpstan-ignore-next-line return.type
+        return $this->client->request(
+            method: 'get',
+            path: ['v1/files/%1$s?beta=true', $fileID],
+            headers: Util::array_transform_keys(
+                $parsed,
+                [
+                    'betas' => 'anthropic-beta', 'workspaceID' => 'anthropic-workspace-id',
+                ],
+            ),
+            options: $options->withApiCall(new ApiCallInfo(
+                name: 'anthropic.files.retrieve_metadata',
+                route: '/v1/files/{file_id}',
+                attributes: ['anthropic.file.id' => $fileID],
+            )),
+            convert: BetaFileMetadata::class,
+        );
+    }
+
+    /**
+     * @api
+     *
+     * Upload File
+     *
+     * @param array{
+     *   file: string|FileParam,
+     *   expiresInSeconds?: int,
+     *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>,
+     *   workspaceID?: string,
+     * }|FileUploadParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<BetaFileMetadata>
+     *
+     * @throws APIException
+     */
+    public function upload(
+        array|FileUploadParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse {
+        [$parsed, $options] = FileUploadParams::parseRequest(
+            $params,
+            $requestOptions,
+        );
+        $header_params = [
+            'betas' => 'anthropic-beta', 'workspaceID' => 'anthropic-workspace-id',
+        ];
+
+        // @phpstan-ignore-next-line return.type
+        return $this->client->request(
+            method: 'post',
+            path: 'v1/files?beta=true',
+            headers: Util::array_transform_keys(
+                [
+                    'Content-Type' => 'multipart/form-data',
+                    ...array_intersect_key(
+                        $parsed,
+                        array_flip(array_keys($header_params))
+                    ),
+                ],
+                $header_params,
+            ),
+            body: (object) array_diff_key(
+                $parsed,
+                array_flip(array_keys($header_params))
+            ),
+            options: $options->withApiCall(new ApiCallInfo(
+                name: 'anthropic.files.upload',
+                route: '/v1/files',
+                createdId: 'anthropic.file.id',
+            )),
+            convert: BetaFileMetadata::class,
+        );
+    }
+}

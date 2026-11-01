@@ -1,0 +1,388 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Beta\Messages;
+
+use Anthropic\Beta\Messages\BetaUsage\ServiceTier;
+use Anthropic\Beta\Messages\BetaUsage\Speed;
+use Anthropic\Core\Attributes\Required;
+use Anthropic\Core\Concerns\SdkModel;
+use Anthropic\Core\Contracts\BaseModel;
+
+/**
+ * @phpstan-import-type BetaCacheCreationShape from \Anthropic\Beta\Messages\BetaCacheCreation
+ * @phpstan-import-type BetaFallbackCreditUsageShape from \Anthropic\Beta\Messages\BetaFallbackCreditUsage
+ * @phpstan-import-type BetaIterationsUsageItemShape from \Anthropic\Beta\Messages\BetaIterationsUsageItem
+ * @phpstan-import-type BetaOutputTokensDetailsShape from \Anthropic\Beta\Messages\BetaOutputTokensDetails
+ * @phpstan-import-type BetaServerToolUsageShape from \Anthropic\Beta\Messages\BetaServerToolUsage
+ * @phpstan-import-type BetaIterationsUsageItemVariants from \Anthropic\Beta\Messages\BetaIterationsUsageItem
+ *
+ * @phpstan-type BetaUsageShape = array{
+ *   cacheCreation: null|BetaCacheCreation|BetaCacheCreationShape,
+ *   cacheCreationInputTokens: int|null,
+ *   cacheReadInputTokens: int|null,
+ *   fallbackCredit: null|BetaFallbackCreditUsage|BetaFallbackCreditUsageShape,
+ *   inferenceGeo: string|null,
+ *   inputTokens: int,
+ *   iterations: list<BetaIterationsUsageItemShape>|null,
+ *   outputTokens: int,
+ *   outputTokensDetails: null|BetaOutputTokensDetails|BetaOutputTokensDetailsShape,
+ *   serverToolUse: null|BetaServerToolUsage|BetaServerToolUsageShape,
+ *   serviceTier: null|ServiceTier|value-of<ServiceTier>,
+ *   speed: null|Speed|value-of<Speed>,
+ * }
+ */
+final class BetaUsage implements BaseModel
+{
+    /** @use SdkModel<BetaUsageShape> */
+    use SdkModel;
+
+    /**
+     * Breakdown of cached tokens by TTL.
+     */
+    #[Required('cache_creation')]
+    public ?BetaCacheCreation $cacheCreation;
+
+    /**
+     * The number of input tokens used to create the cache entry.
+     */
+    #[Required('cache_creation_input_tokens')]
+    public ?int $cacheCreationInputTokens;
+
+    /**
+     * The number of input tokens read from the cache.
+     */
+    #[Required('cache_read_input_tokens')]
+    public ?int $cacheReadInputTokens;
+
+    /**
+     * Outcome of the `fallback_credit_token` presented on this request.
+     *
+     * Present on every response to a non-batch request that carried a
+     * `fallback_credit_token`, in either redemption mode; absent otherwise (batch
+     * items accept and ignore the token and carry no outcome object).
+     */
+    #[Required('fallback_credit')]
+    public ?BetaFallbackCreditUsage $fallbackCredit;
+
+    /**
+     * The geographic region where inference was performed for this request.
+     */
+    #[Required('inference_geo')]
+    public ?string $inferenceGeo;
+
+    /**
+     * The number of input tokens which were used.
+     */
+    #[Required('input_tokens')]
+    public int $inputTokens;
+
+    /**
+     * Per-iteration token usage breakdown.
+     *
+     * Each entry represents one sampling iteration, with its own input/output token counts and cache statistics, discriminated by `type`. For `message` entries (model sampling iterations, such as the turns of a server-side tool use loop), this allows you to:
+     * - Calculate the context window size from the last `message` entry
+     * - Understand token accumulation across server-side tool use loops
+     *
+     * A `compaction` entry reports the token usage of the compaction operation itself — the server-side request that summarizes the context being closed — NOT the size of the context that was compacted away, and its token counts can be much smaller than that closed context (for example, a compaction that closes a ~200k-token context can report only a few thousand tokens). Do not derive the context window size from a `compaction` entry, even when it is the last entry. A `compaction` entry's tokens are not included in the top-level `usage` fields. When an input-token trigger is in effect (the default — 150,000 tokens unless configured otherwise), each `compaction` entry closes a context that had reached at least that threshold, though the context can exceed it by the final iteration's output and tool results.
+     *
+     * @var list<BetaIterationsUsageItemVariants>|null $iterations
+     */
+    #[Required(list: BetaIterationsUsageItem::class)]
+    public ?array $iterations;
+
+    /**
+     * The number of output tokens which were used.
+     */
+    #[Required('output_tokens')]
+    public int $outputTokens;
+
+    /**
+     * Breakdown of output tokens by category.
+     *
+     * `output_tokens` remains the inclusive, authoritative total used for billing.
+     * This object provides a read-only decomposition for observability — for example,
+     * how many of the billed output tokens were spent on internal reasoning that may
+     * have been summarized before being returned to you.
+     */
+    #[Required('output_tokens_details')]
+    public ?BetaOutputTokensDetails $outputTokensDetails;
+
+    /**
+     * The number of server tool requests.
+     */
+    #[Required('server_tool_use')]
+    public ?BetaServerToolUsage $serverToolUse;
+
+    /**
+     * If the request used the priority, standard, or batch tier.
+     *
+     * @var value-of<ServiceTier>|null $serviceTier
+     */
+    #[Required('service_tier', enum: ServiceTier::class)]
+    public ?string $serviceTier;
+
+    /**
+     * The inference speed mode used for this request.
+     *
+     * @var value-of<Speed>|null $speed
+     */
+    #[Required(enum: Speed::class)]
+    public ?string $speed;
+
+    /**
+     * `new BetaUsage()` is missing required properties by the API.
+     *
+     * To enforce required parameters use
+     * ```
+     * BetaUsage::with(
+     *   cacheCreation: ...,
+     *   cacheCreationInputTokens: ...,
+     *   cacheReadInputTokens: ...,
+     *   fallbackCredit: ...,
+     *   inferenceGeo: ...,
+     *   inputTokens: ...,
+     *   iterations: ...,
+     *   outputTokens: ...,
+     *   outputTokensDetails: ...,
+     *   serverToolUse: ...,
+     *   serviceTier: ...,
+     *   speed: ...,
+     * )
+     * ```
+     *
+     * Otherwise ensure the following setters are called
+     *
+     * ```
+     * (new BetaUsage())
+     *   ->withCacheCreation(...)
+     *   ->withCacheCreationInputTokens(...)
+     *   ->withCacheReadInputTokens(...)
+     *   ->withFallbackCredit(...)
+     *   ->withInferenceGeo(...)
+     *   ->withInputTokens(...)
+     *   ->withIterations(...)
+     *   ->withOutputTokens(...)
+     *   ->withOutputTokensDetails(...)
+     *   ->withServerToolUse(...)
+     *   ->withServiceTier(...)
+     *   ->withSpeed(...)
+     * ```
+     */
+    public function __construct()
+    {
+        $this->initialize();
+    }
+
+    /**
+     * Construct an instance from the required parameters.
+     *
+     * You must use named parameters to construct any parameters with a default value.
+     *
+     * @param BetaCacheCreation|BetaCacheCreationShape|null $cacheCreation
+     * @param BetaFallbackCreditUsage|BetaFallbackCreditUsageShape|null $fallbackCredit
+     * @param list<BetaIterationsUsageItemShape>|null $iterations
+     * @param BetaOutputTokensDetails|BetaOutputTokensDetailsShape|null $outputTokensDetails
+     * @param BetaServerToolUsage|BetaServerToolUsageShape|null $serverToolUse
+     * @param ServiceTier|value-of<ServiceTier>|null $serviceTier
+     * @param Speed|value-of<Speed>|null $speed
+     */
+    public static function with(
+        BetaCacheCreation|array|null $cacheCreation,
+        ?int $cacheCreationInputTokens,
+        ?int $cacheReadInputTokens,
+        BetaFallbackCreditUsage|array|null $fallbackCredit,
+        ?string $inferenceGeo,
+        int $inputTokens,
+        ?array $iterations,
+        int $outputTokens,
+        BetaOutputTokensDetails|array|null $outputTokensDetails,
+        BetaServerToolUsage|array|null $serverToolUse,
+        ServiceTier|string|null $serviceTier,
+        Speed|string|null $speed,
+    ): self {
+        $self = new self;
+
+        $self['cacheCreation'] = $cacheCreation;
+        $self['cacheCreationInputTokens'] = $cacheCreationInputTokens;
+        $self['cacheReadInputTokens'] = $cacheReadInputTokens;
+        $self['fallbackCredit'] = $fallbackCredit;
+        $self['inferenceGeo'] = $inferenceGeo;
+        $self['inputTokens'] = $inputTokens;
+        $self['iterations'] = $iterations;
+        $self['outputTokens'] = $outputTokens;
+        $self['outputTokensDetails'] = $outputTokensDetails;
+        $self['serverToolUse'] = $serverToolUse;
+        $self['serviceTier'] = $serviceTier;
+        $self['speed'] = $speed;
+
+        return $self;
+    }
+
+    /**
+     * Breakdown of cached tokens by TTL.
+     *
+     * @param BetaCacheCreation|BetaCacheCreationShape|null $cacheCreation
+     */
+    public function withCacheCreation(
+        BetaCacheCreation|array|null $cacheCreation
+    ): self {
+        $self = clone $this;
+        $self['cacheCreation'] = $cacheCreation;
+
+        return $self;
+    }
+
+    /**
+     * The number of input tokens used to create the cache entry.
+     */
+    public function withCacheCreationInputTokens(
+        ?int $cacheCreationInputTokens
+    ): self {
+        $self = clone $this;
+        $self['cacheCreationInputTokens'] = $cacheCreationInputTokens;
+
+        return $self;
+    }
+
+    /**
+     * The number of input tokens read from the cache.
+     */
+    public function withCacheReadInputTokens(?int $cacheReadInputTokens): self
+    {
+        $self = clone $this;
+        $self['cacheReadInputTokens'] = $cacheReadInputTokens;
+
+        return $self;
+    }
+
+    /**
+     * Outcome of the `fallback_credit_token` presented on this request.
+     *
+     * Present on every response to a non-batch request that carried a
+     * `fallback_credit_token`, in either redemption mode; absent otherwise (batch
+     * items accept and ignore the token and carry no outcome object).
+     *
+     * @param BetaFallbackCreditUsage|BetaFallbackCreditUsageShape|null $fallbackCredit
+     */
+    public function withFallbackCredit(
+        BetaFallbackCreditUsage|array|null $fallbackCredit
+    ): self {
+        $self = clone $this;
+        $self['fallbackCredit'] = $fallbackCredit;
+
+        return $self;
+    }
+
+    /**
+     * The geographic region where inference was performed for this request.
+     */
+    public function withInferenceGeo(?string $inferenceGeo): self
+    {
+        $self = clone $this;
+        $self['inferenceGeo'] = $inferenceGeo;
+
+        return $self;
+    }
+
+    /**
+     * The number of input tokens which were used.
+     */
+    public function withInputTokens(int $inputTokens): self
+    {
+        $self = clone $this;
+        $self['inputTokens'] = $inputTokens;
+
+        return $self;
+    }
+
+    /**
+     * Per-iteration token usage breakdown.
+     *
+     * Each entry represents one sampling iteration, with its own input/output token counts and cache statistics, discriminated by `type`. For `message` entries (model sampling iterations, such as the turns of a server-side tool use loop), this allows you to:
+     * - Calculate the context window size from the last `message` entry
+     * - Understand token accumulation across server-side tool use loops
+     *
+     * A `compaction` entry reports the token usage of the compaction operation itself — the server-side request that summarizes the context being closed — NOT the size of the context that was compacted away, and its token counts can be much smaller than that closed context (for example, a compaction that closes a ~200k-token context can report only a few thousand tokens). Do not derive the context window size from a `compaction` entry, even when it is the last entry. A `compaction` entry's tokens are not included in the top-level `usage` fields. When an input-token trigger is in effect (the default — 150,000 tokens unless configured otherwise), each `compaction` entry closes a context that had reached at least that threshold, though the context can exceed it by the final iteration's output and tool results.
+     *
+     * @param list<BetaIterationsUsageItemShape>|null $iterations
+     */
+    public function withIterations(?array $iterations): self
+    {
+        $self = clone $this;
+        $self['iterations'] = $iterations;
+
+        return $self;
+    }
+
+    /**
+     * The number of output tokens which were used.
+     */
+    public function withOutputTokens(int $outputTokens): self
+    {
+        $self = clone $this;
+        $self['outputTokens'] = $outputTokens;
+
+        return $self;
+    }
+
+    /**
+     * Breakdown of output tokens by category.
+     *
+     * `output_tokens` remains the inclusive, authoritative total used for billing.
+     * This object provides a read-only decomposition for observability — for example,
+     * how many of the billed output tokens were spent on internal reasoning that may
+     * have been summarized before being returned to you.
+     *
+     * @param BetaOutputTokensDetails|BetaOutputTokensDetailsShape|null $outputTokensDetails
+     */
+    public function withOutputTokensDetails(
+        BetaOutputTokensDetails|array|null $outputTokensDetails
+    ): self {
+        $self = clone $this;
+        $self['outputTokensDetails'] = $outputTokensDetails;
+
+        return $self;
+    }
+
+    /**
+     * The number of server tool requests.
+     *
+     * @param BetaServerToolUsage|BetaServerToolUsageShape|null $serverToolUse
+     */
+    public function withServerToolUse(
+        BetaServerToolUsage|array|null $serverToolUse
+    ): self {
+        $self = clone $this;
+        $self['serverToolUse'] = $serverToolUse;
+
+        return $self;
+    }
+
+    /**
+     * If the request used the priority, standard, or batch tier.
+     *
+     * @param ServiceTier|value-of<ServiceTier>|null $serviceTier
+     */
+    public function withServiceTier(ServiceTier|string|null $serviceTier): self
+    {
+        $self = clone $this;
+        $self['serviceTier'] = $serviceTier;
+
+        return $self;
+    }
+
+    /**
+     * The inference speed mode used for this request.
+     *
+     * @param Speed|value-of<Speed>|null $speed
+     */
+    public function withSpeed(Speed|string|null $speed): self
+    {
+        $self = clone $this;
+        $self['speed'] = $speed;
+
+        return $self;
+    }
+}

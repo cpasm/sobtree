@@ -1,0 +1,29 @@
+<?php
+
+require_once __DIR__.'/../../vendor/autoload.php';
+
+use Anthropic\Bedrock;
+
+// Discover and create a Bedrock client from the current environment (e.g. Environment variables, EC2 instance profile)
+$client = Bedrock\Client::fromEnvironment();
+
+// Explicit credentials and region
+// $client = Bedrock\Client::withCredentials(
+//     accessKeyId: 'YOUR_ACCESS_KEY_ID',
+//     secretAccessKey: 'YOUR_AWS_SECRET',
+//     region: 'us-east-1',
+// );
+
+$response = $client->messages->create(
+    model: 'global.anthropic.claude-sonnet-5-5',
+    maxTokens: 1024,
+    messages: [
+        [
+            'role' => 'user',
+            'content' => 'Hello, Claude!',
+        ],
+    ],
+);
+
+var_dump($response->content);
+

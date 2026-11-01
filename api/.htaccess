@@ -1,0 +1,6 @@
+# Solo los endpoints son accesibles desde fuera; vendor/ y corpus.json se leen desde PHP.
+RewriteEngine On
+RewriteRule ^(asistente|newsletter)\.php$ - [L]
+# Contrata: solo estos cuatro. El simulador (contrata/sim/) queda prohibido.
+RewriteRule ^contrata/(disponibilidad|crear-sesion|stripe-webhook|descargar)\.php$ - [L]
+RewriteRule ^ - [F,L]

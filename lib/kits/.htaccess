@@ -1,0 +1,3 @@
+# Archivos de los productos digitales: nunca accesibles desde la web. Los entrega api/contrata/descargar.php
+# solo a compras pagadas (además, lib/.htaccess ya lo deniega todo).
+Require all denied

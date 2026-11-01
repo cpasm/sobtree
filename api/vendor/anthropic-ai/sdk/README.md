@@ -1,0 +1,441 @@
+# Claude SDK for PHP
+
+[![Packagist Version](https://img.shields.io/packagist/v/anthropic-ai/sdk.svg)](https://packagist.org/packages/anthropic-ai/sdk)
+
+The Claude SDK for PHP provides access to the [Claude API](https://docs.anthropic.com/en/api/) from PHP applications.
+
+## Documentation
+
+Full documentation is available at **[platform.claude.com/docs/en/api/sdks/php](https://platform.claude.com/docs/en/api/sdks/php)**.
+
+## Installation
+
+<!-- x-release-please-start-version -->
+
+```sh
+composer require "anthropic-ai/sdk:^1.1.0"
+```
+
+<!-- x-release-please-end -->
+
+The SDK needs a [PSR-18](https://www.php-fig.org/psr/psr-18/) HTTP client. If you don't have one installed, add Guzzle:
+
+```sh
+composer require guzzlehttp/guzzle
+```
+
+## Getting started
+
+```php
+<?php
+
+use Anthropic\Client;
+
+$client = new Client(
+  apiKey: getenv('ANTHROPIC_API_KEY') ?: 'my-anthropic-api-key'
+);
+
+$message = $client->messages->create(
+  maxTokens: 1024,
+  messages: [['role' => 'user', 'content' => 'Hello, Claude']],
+  model: 'claude-opus-5-5',
+);
+
+var_dump($message->content);
+```
+
+> [!NOTE]
+> This library uses named parameters to specify optional arguments. For forward compatibility, arguments must be set by name.
+
+### Value Objects
+
+It is recommended to use the static `with` constructor `AssistantMessageParam::with(content: [
+  ['text' => 'What is a quaternion?', 'type' => 'text']
+], ...)`
+and named parameters to initialize value objects.
+
+However, builders are also provided `(new AssistantMessageParam())->withContent([
+  ['text' => 'What is a quaternion?', 'type' => 'text']
+])`.
+
+### Streaming
+
+We provide support for streaming responses using Server-Sent Events (SSE).
+
+```php
+<?php
+
+use Anthropic\Client;
+use Anthropic\Messages\Model;
+
+$client = new Client(
+  apiKey: getenv('ANTHROPIC_API_KEY') ?: 'my-anthropic-api-key'
+);
+
+$stream = $client->messages->createStream(
+  maxTokens: 1024,
+  messages: [['role' => 'user', 'content' => 'Hello, Claude']],
+  model: Model::CLAUDE_SONNET_5_5,
+);
+
+foreach ($stream as $message) {
+  var_dump($message);
+}
+```
+
+To accumulate the streamed events into the message they build up to — text concatenated, tool inputs assembled from their JSON chunks, usage totals merged — fold them through a `MessageAccumulator`:
+
+```php
+<?php
+
+use Anthropic\Lib\Streaming\MessageAccumulator;
+
+$accumulator = MessageAccumulator::forMessages(); // or forBetaMessages()
+foreach ($stream as $event) {
+  $accumulator->accumulate($event);
+}
+
+$message = $accumulator->message(); // Anthropic\Messages\Message
+echo $message->content[0]->text;
+```
+
+`message()` can also be called mid-stream for a snapshot of what has arrived so far.
+
+Streaming requests are dispatched through a separate `streamingTransporter` PSR-18 HTTP client. When unset, the SDK uses the configured `transporter`.
+Some PSR-18 HTTP clients will by default try to read the entire response, so you may need to specify a streaming capable implementation.
+
+```php
+$client = new Anthropic\Client(
+    requestOptions: Anthropic\RequestOptions::with(streamingTransporter: $myStreamingClient),
+);
+```
+
+### Structured Output
+
+You can use PHP classes to define structured output schemas. The SDK will automatically convert your class to a JSON schema and parse responses back into typed objects.
+
+```php
+<?php
+
+use Anthropic\Lib\Concerns\StructuredOutputModelTrait;
+use Anthropic\Lib\Contracts\StructuredOutputModel;
+
+class Article implements StructuredOutputModel
+{
+    use StructuredOutputModelTrait;
+
+    public string $title;
+    public string $summary;
+    /** @var string[] */
+    public array $tags;
+}
+
+$message = $client->messages->create(
+  maxTokens: 1024,
+  messages: [['role' => 'user', 'content' => 'Write an article about PHP']],
+  model: 'claude-sonnet-5-5',
+  outputConfig: ['format' => Article::class],
+);
+
+$article = $message->content[0]->parsed; // Article instance
+echo $article->title;
+```
+
+See [examples/messages_structured_output.php](examples/messages_structured_output.php) for more examples including constraints, nested models, and streaming.
+### Pagination
+
+List methods in the Anthropic API are paginated.
+
+This library provides auto-paginating iterators with each list response, so you do not have to request successive pages manually:
+
+```php
+<?php
+
+use Anthropic\Client;
+
+$client = new Client(
+  apiKey: getenv('ANTHROPIC_API_KEY') ?: 'my-anthropic-api-key'
+);
+
+$page = $client->beta->messages->batches->list(limit: 20);
+
+var_dump($page);
+
+// fetch items from the current page
+foreach ($page->getItems() as $item) {
+  var_dump($item->id);
+}
+// make additional network requests to fetch items from all pages, including and after the current page
+foreach ($page->pagingEachItem() as $item) {
+  var_dump($item->id);
+}
+```
+
+### Handling errors
+
+When the library is unable to connect to the API, or if the API returns a non-success status code (i.e., 4xx or 5xx response), a subclass of `Anthropic\Core\Exceptions\APIException` will be thrown:
+
+```php
+<?php
+
+use Anthropic\Core\Exceptions\APIConnectionException;
+use Anthropic\Core\Exceptions\RateLimitException;
+use Anthropic\Core\Exceptions\APIStatusException;
+use Anthropic\Messages\Model;
+
+try {
+  $message = $client->messages->create(
+    maxTokens: 1024,
+    messages: [['role' => 'user', 'content' => 'Hello, Claude']],
+    model: Model::CLAUDE_SONNET_5_5,
+  );
+} catch (APIConnectionException $e) {
+  echo "The server could not be reached", PHP_EOL;
+  var_dump($e->getPrevious());
+} catch (RateLimitException $e) {
+  echo "A 429 status code was received; we should back off a bit.", PHP_EOL;
+} catch (APIStatusException $e) {
+  echo "Another non-200-range status code was received", PHP_EOL;
+  echo $e->getMessage();
+}
+```
+
+Error codes are as follows:
+
+| Cause            | Error Type                     |
+| ---------------- | ------------------------------ |
+| HTTP 400         | `BadRequestException`          |
+| HTTP 401         | `AuthenticationException`      |
+| HTTP 403         | `PermissionDeniedException`    |
+| HTTP 404         | `NotFoundException`            |
+| HTTP 409         | `ConflictException`            |
+| HTTP 422         | `UnprocessableEntityException` |
+| HTTP 429         | `RateLimitException`           |
+| HTTP >= 500      | `InternalServerException`      |
+| Other HTTP error | `APIStatusException`           |
+| Timeout          | `APITimeoutException`          |
+| Network error    | `APIConnectionException`       |
+
+### Retries
+
+Certain errors will be automatically retried 2 times by default, with a short exponential backoff.
+
+Connection errors (for example, due to a network connectivity problem), 408 Request Timeout, 409 Conflict, 429 Rate Limit, >=500 Internal errors, and timeouts will all be retried by default.
+
+You can use the `maxRetries` option to configure or disable this:
+
+```php
+<?php
+
+use Anthropic\Client;
+use Anthropic\Messages\Model;
+
+// Configure the default for all requests:
+$client = new Client(requestOptions: ['maxRetries' => 0]);
+
+// Or, configure per-request:
+$result = $client->messages->create(
+  maxTokens: 1024,
+  messages: [['role' => 'user', 'content' => 'Hello, Claude']],
+  model: Model::CLAUDE_SONNET_5_5,
+  requestOptions: ['maxRetries' => 5],
+);
+```
+
+### File uploads
+
+Request parameters that correspond to file uploads can be passed as a resource returned by `fopen()`, a string of file contents, or a `FileParam` instance.
+
+```php
+<?php
+
+use Anthropic\Core\FileParam;
+
+// Pass a string with filename and content type:
+$contents = file_get_contents('/path/to/file');
+$fileMetadata = $client->files->upload(
+  file: FileParam::fromString($contents, filename: '/path/to/file', contentType: '…'),
+);
+
+// Pass in only a string (where applicable)
+$fileMetadata = $client->files->upload(file: '…');
+
+// Pass an open resource:
+$fd = fopen('/path/to/file', 'r');
+try {
+  $fileMetadata = $client->files->upload(
+    file: FileParam::fromResource($fd, filename: '/path/to/file', contentType: '…'),
+  );
+} finally {
+  fclose($fd);
+}
+```
+
+## Advanced concepts
+
+### Making custom or undocumented requests
+
+#### Undocumented properties
+
+You can send undocumented parameters to any endpoint, and read undocumented response properties, like so:
+
+Note: the `extra*` parameters of the same name overrides the documented parameters.
+
+```php
+<?php
+
+use Anthropic\Messages\Model;
+
+$message = $client->messages->create(
+  maxTokens: 1024,
+  messages: [['role' => 'user', 'content' => 'Hello, Claude']],
+  model: Model::CLAUDE_SONNET_5_5,
+  requestOptions: [
+    'extraQueryParams' => ['my_query_parameter' => 'value'],
+    'extraBodyParams' => ['my_body_parameter' => 'value'],
+    'extraHeaders' => ['my-header' => 'value'],
+  ],
+);
+```
+
+#### Undocumented request params
+
+If you want to explicitly send an extra param, you can do so with the `extraQueryParams`, `extraBodyParams`, and `extraHeaders` under the `requestOptions:` parameter when making a request, as seen in the examples above.
+
+#### Undocumented endpoints
+
+To make requests to undocumented endpoints while retaining the benefit of auth, retries, and so on, you can make requests using `$client->request`, like so:
+
+```php
+<?php
+
+$response = $client->request(
+  method: "post",
+  path: '/undocumented/endpoint',
+  query: ['dog' => 'woof'],
+  headers: ['useful-header' => 'interesting-value'],
+  body: ['hello' => 'world']
+);
+```
+
+### Middleware
+
+You can intercept every HTTP request the client makes — to log, add headers, short-circuit with a cached response, or issue follow-up requests — by passing middleware: an array of callables of shape
+
+```php
+callable(RequestInterface $request, callable $next): ResponseInterface
+```
+
+where `$next` invokes the rest of the chain (it may be called zero, one, or several times). A class implementing `Anthropic\Middleware` — the same signature, as `handle()` — works anywhere a callable does. Every middleware is also invoked with the attempt's merged `RequestOptions` as a third argument — declare an optional third parameter (`?RequestOptions $options = null`) to read request-level options such as `fallbackState` — treat it as read-only. Middleware whose third parameter already served another purpose must be rewritten: the pipeline now fills that slot on every invocation.
+
+```php
+<?php
+
+use Anthropic\Client;
+use Anthropic\Middleware;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
+
+$logger = function (RequestInterface $request, callable $next): ResponseInterface {
+    error_log("-> {$request->getMethod()} {$request->getUri()}");
+    $response = $next($request);
+    error_log("<- {$response->getStatusCode()}");
+
+    return $response;
+};
+
+final class TracingMiddleware implements Middleware
+{
+    public function handle(RequestInterface $request, \Closure $next): ResponseInterface
+    {
+        return $next($request->withHeader('x-trace-id', bin2hex(random_bytes(8))));
+    }
+}
+
+// client-level: applies to every request made by this client
+$client = new Client(requestOptions: ['middleware' => [$logger, new TracingMiddleware]]);
+
+// request-level: applies to this call only, and runs after (inside) client middleware
+$client->messages->create(
+  maxTokens: 1024,
+  messages: [['role' => 'user', 'content' => 'Hello, Claude']],
+  model: 'claude-sonnet-5-5',
+  requestOptions: ['middleware' => [$logger]],
+);
+```
+
+Middleware runs once per HTTP attempt, inside the SDK's retry loop. `$next` returns a response for every HTTP status — the SDK raises its typed exceptions only after the chain returns. Errors thrown by middleware propagate to the caller as-is. Backend adaptation (OAuth token refresh, Bedrock/Vertex request signing) runs inside the innermost `$next`, so a request mutated or re-issued by middleware is re-signed on every call.
+
+A middleware that reads a response body must rewind it (or return a replacement via `$response->withBody(...)`) so the SDK can still decode it.
+
+### OpenTelemetry
+
+The SDK reports each API call as an OpenTelemetry span once your application has registered a tracer provider with the OpenTelemetry API (`open-telemetry/api`), which the SDK requires. Spans are on by default, so there is nothing to enable on the client.
+
+The `openTelemetry` client option selects another tracer provider with `tracerProvider`, turns the trace context headers of the requests off with `propagation`, and configures the spans with `traces`:
+
+- `enabled`: `false` turns the spans off. The other settings are then unused.
+- `contentMode`: `'content'` adds the content of requests and responses to the spans. `'metadata_only'`, the default, leaves it out.
+- `maxContentBytes`: the most bytes of content that one span holds, in place of the SDK's own bound of 0.75 MB. Content over the bound loses its oldest parts, and the span gets `anthropic.content.truncated`.
+
+`'traces' => false` is short for `'traces' => ['enabled' => false]`, and `openTelemetry: false` is short for that. A key that the option does not take, such as a misspelt one, or a value it does not accept throws an `InvalidArgumentException`, as an unknown key or a `conversationId` that is no string does in the `openTelemetry` request option.
+
+Each request carries the trace context of its span in the headers that your registered propagator writes. `'propagation' => false` leaves them out, for an application whose HTTP client instrumentation already propagates the trace context, so that a request does not carry it twice. A span that the sampler dropped is then still the current span while its requests are sent, so that the instrumentation continues the trace with that sampling decision. The spans are the same either way.
+
+The environment variables `ANTHROPIC_OPEN_TELEMETRY`, `ANTHROPIC_OPEN_TELEMETRY_PROPAGATION`, `ANTHROPIC_OPEN_TELEMETRY_TRACES_CONTENT_MODE` and `ANTHROPIC_OPEN_TELEMETRY_TRACES_MAX_CONTENT_BYTES` set `traces.enabled`, `propagation`, `traces.contentMode` and `traces.maxContentBytes` for a client that is given no `openTelemetry` option. It reads them once, when it is built, so a later change to them does not reach it. A value they do not accept is ignored. A client that is given the option does not read them: what the option leaves unset has its default.
+
+```php
+<?php
+
+use Anthropic\Client;
+
+// a tracer provider other than the registered one
+$client = new Client(openTelemetry: ['tracerProvider' => $tracerProvider]);
+
+// no spans
+$quiet = new Client(openTelemetry: false);
+
+// spans, and no trace context headers on the requests
+$unpropagated = new Client(openTelemetry: ['propagation' => false]);
+
+// spans with the content of requests and responses, up to 64 KiB for each span
+$verbose = new Client(openTelemetry: ['traces' => ['contentMode' => 'content', 'maxContentBytes' => 65536]]);
+
+// sets gen_ai.conversation.id on the call's span; without it, only a call to a Session thread has one: the thread's ID
+$client->messages->create(
+  maxTokens: 1024,
+  messages: [['role' => 'user', 'content' => 'Hello, Claude']],
+  model: 'claude-sonnet-5',
+  requestOptions: ['openTelemetry' => ['conversationId' => $conversationId]],
+);
+```
+
+The `openTelemetry` request option of a call replaces the one in the client's `requestOptions` whole, as every request option does.
+
+## Versioning
+
+This package follows [SemVer](https://semver.org/spec/v2.0.0.html) conventions.
+
+This package considers improvements to the (non-runtime) PHPDoc type definitions to be non-breaking changes.
+
+## Requirements
+
+PHP 8.1.0+
+
+## Autoloading note
+
+This SDK includes class aliases for backwards compatibility, but these are not available when using authoritative classmaps in Composer.
+
+If you use `composer --classmap-authoritative` and you rely on any of the following class names:
+
+- `UnwrapWebhookEvent`
+
+Then update your code to use the true class name.
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## License
+
+This project is licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for details. Versions released before the change from the MIT License, and third-party contributions merged before it, remain under the MIT License. See [LICENSE-MIT](LICENSE-MIT).

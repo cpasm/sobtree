@@ -1,0 +1,259 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Beta\Sessions\Events;
+
+use Anthropic\Beta\AnthropicBeta;
+use Anthropic\Beta\Sessions\Events\EventListParams\Order;
+use Anthropic\Core\Attributes\Optional;
+use Anthropic\Core\Concerns\SdkModel;
+use Anthropic\Core\Concerns\SdkParams;
+use Anthropic\Core\Contracts\BaseModel;
+
+/**
+ * List Events.
+ *
+ * @see Anthropic\Services\Beta\Sessions\EventsService::list()
+ *
+ * @phpstan-type EventListParamsShape = array{
+ *   createdAtGt?: \DateTimeInterface|null,
+ *   createdAtGte?: \DateTimeInterface|null,
+ *   createdAtLt?: \DateTimeInterface|null,
+ *   createdAtLte?: \DateTimeInterface|null,
+ *   limit?: int|null,
+ *   order?: null|Order|value-of<Order>,
+ *   page?: string|null,
+ *   types?: list<ManagedAgentsSessionEventType|value-of<ManagedAgentsSessionEventType>>|null,
+ *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>|null,
+ *   workspaceID?: string|null,
+ * }
+ */
+final class EventListParams implements BaseModel
+{
+    /** @use SdkModel<EventListParamsShape> */
+    use SdkModel;
+    use SdkParams;
+
+    /**
+     * Return events created after this time (exclusive). Compared against the event's `processed_at` value.
+     */
+    #[Optional]
+    public ?\DateTimeInterface $createdAtGt;
+
+    /**
+     * Return events created at or after this time (inclusive). Compared against the event's `processed_at` value.
+     */
+    #[Optional]
+    public ?\DateTimeInterface $createdAtGte;
+
+    /**
+     * Return events created before this time (exclusive). Compared against the event's `processed_at` value.
+     */
+    #[Optional]
+    public ?\DateTimeInterface $createdAtLt;
+
+    /**
+     * Return events created at or before this time (inclusive). Compared against the event's `processed_at` value.
+     */
+    #[Optional]
+    public ?\DateTimeInterface $createdAtLte;
+
+    #[Optional]
+    public ?int $limit;
+
+    /**
+     * Sort direction for results, ordered by the event's `processed_at`. Defaults to `asc` (chronological).
+     *
+     * @var value-of<Order>|null $order
+     */
+    #[Optional(enum: Order::class)]
+    public ?string $order;
+
+    /**
+     * Opaque pagination cursor from a previous response's `next_page`.
+     */
+    #[Optional]
+    public ?string $page;
+
+    /**
+     * Filter by event type. Values match the `type` field on returned events (for example, `user.message` or `agent.tool_use`). Omit to return all event types.
+     *
+     * @var list<value-of<ManagedAgentsSessionEventType>>|null $types
+     */
+    #[Optional(list: ManagedAgentsSessionEventType::class)]
+    public ?array $types;
+
+    /**
+     * This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header.
+     *
+     * @var list<string|value-of<AnthropicBeta>>|null $betas
+     */
+    #[Optional(list: AnthropicBeta::class)]
+    public ?array $betas;
+
+    /**
+     * Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     */
+    #[Optional]
+    public ?string $workspaceID;
+
+    public function __construct()
+    {
+        $this->initialize();
+    }
+
+    /**
+     * Construct an instance from the required parameters.
+     *
+     * You must use named parameters to construct any parameters with a default value.
+     *
+     * @param Order|value-of<Order>|null $order
+     * @param list<ManagedAgentsSessionEventType|value-of<ManagedAgentsSessionEventType>>|null $types
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>>|null $betas
+     */
+    public static function with(
+        ?\DateTimeInterface $createdAtGt = null,
+        ?\DateTimeInterface $createdAtGte = null,
+        ?\DateTimeInterface $createdAtLt = null,
+        ?\DateTimeInterface $createdAtLte = null,
+        ?int $limit = null,
+        Order|string|null $order = null,
+        ?string $page = null,
+        ?array $types = null,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+    ): self {
+        $self = new self;
+
+        null !== $createdAtGt && $self['createdAtGt'] = $createdAtGt;
+        null !== $createdAtGte && $self['createdAtGte'] = $createdAtGte;
+        null !== $createdAtLt && $self['createdAtLt'] = $createdAtLt;
+        null !== $createdAtLte && $self['createdAtLte'] = $createdAtLte;
+        null !== $limit && $self['limit'] = $limit;
+        null !== $order && $self['order'] = $order;
+        null !== $page && $self['page'] = $page;
+        null !== $types && $self['types'] = $types;
+        null !== $betas && $self['betas'] = $betas;
+        null !== $workspaceID && $self['workspaceID'] = $workspaceID;
+
+        return $self;
+    }
+
+    /**
+     * Return events created after this time (exclusive). Compared against the event's `processed_at` value.
+     */
+    public function withCreatedAtGt(\DateTimeInterface $createdAtGt): self
+    {
+        $self = clone $this;
+        $self['createdAtGt'] = $createdAtGt;
+
+        return $self;
+    }
+
+    /**
+     * Return events created at or after this time (inclusive). Compared against the event's `processed_at` value.
+     */
+    public function withCreatedAtGte(\DateTimeInterface $createdAtGte): self
+    {
+        $self = clone $this;
+        $self['createdAtGte'] = $createdAtGte;
+
+        return $self;
+    }
+
+    /**
+     * Return events created before this time (exclusive). Compared against the event's `processed_at` value.
+     */
+    public function withCreatedAtLt(\DateTimeInterface $createdAtLt): self
+    {
+        $self = clone $this;
+        $self['createdAtLt'] = $createdAtLt;
+
+        return $self;
+    }
+
+    /**
+     * Return events created at or before this time (inclusive). Compared against the event's `processed_at` value.
+     */
+    public function withCreatedAtLte(\DateTimeInterface $createdAtLte): self
+    {
+        $self = clone $this;
+        $self['createdAtLte'] = $createdAtLte;
+
+        return $self;
+    }
+
+    public function withLimit(int $limit): self
+    {
+        $self = clone $this;
+        $self['limit'] = $limit;
+
+        return $self;
+    }
+
+    /**
+     * Sort direction for results, ordered by the event's `processed_at`. Defaults to `asc` (chronological).
+     *
+     * @param Order|value-of<Order> $order
+     */
+    public function withOrder(Order|string $order): self
+    {
+        $self = clone $this;
+        $self['order'] = $order;
+
+        return $self;
+    }
+
+    /**
+     * Opaque pagination cursor from a previous response's `next_page`.
+     */
+    public function withPage(string $page): self
+    {
+        $self = clone $this;
+        $self['page'] = $page;
+
+        return $self;
+    }
+
+    /**
+     * Filter by event type. Values match the `type` field on returned events (for example, `user.message` or `agent.tool_use`). Omit to return all event types.
+     *
+     * @param list<ManagedAgentsSessionEventType|value-of<ManagedAgentsSessionEventType>> $types
+     */
+    public function withTypes(array $types): self
+    {
+        $self = clone $this;
+        $self['types'] = $types;
+
+        return $self;
+    }
+
+    /**
+     * This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header.
+     *
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas
+     */
+    public function withBetas(array $betas): self
+    {
+        $self = clone $this;
+        $self['betas'] = $betas;
+
+        return $self;
+    }
+
+    /**
+     * Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     */
+    public function withWorkspaceID(string $workspaceID): self
+    {
+        $self = clone $this;
+        $self['workspaceID'] = $workspaceID;
+
+        return $self;
+    }
+}

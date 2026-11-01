@@ -1,0 +1,135 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\ServiceContracts\Beta\Sessions;
+
+use Anthropic\Beta\AnthropicBeta;
+use Anthropic\Beta\Sessions\Resources\ManagedAgentsDeleteSessionResource;
+use Anthropic\Beta\Sessions\Resources\ManagedAgentsFileResource;
+use Anthropic\Beta\Sessions\Resources\ManagedAgentsGitHubRepositoryResource;
+use Anthropic\Beta\Sessions\Resources\ManagedAgentsMemoryStoreResource;
+use Anthropic\Core\Exceptions\APIException;
+use Anthropic\PageCursor;
+use Anthropic\RequestOptions;
+
+/**
+ * @phpstan-import-type RequestOpts from \Anthropic\RequestOptions
+ */
+interface ResourcesContract
+{
+    /**
+     * @api
+     *
+     * @param string $resourceID Path param
+     * @param string $sessionID Path param
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function retrieve(
+        string $resourceID,
+        string $sessionID,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): ManagedAgentsGitHubRepositoryResource|ManagedAgentsFileResource|ManagedAgentsMemoryStoreResource;
+
+    /**
+     * @api
+     *
+     * @param string $resourceID Path param
+     * @param string $sessionID Path param
+     * @param string $authorizationToken Body param: New authorization token for the resource. Currently only `github_repository` resources support token rotation.
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function update(
+        string $resourceID,
+        string $sessionID,
+        string $authorizationToken,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): ManagedAgentsGitHubRepositoryResource|ManagedAgentsFileResource|ManagedAgentsMemoryStoreResource;
+
+    /**
+     * @api
+     *
+     * @param string $sessionID Path param
+     * @param int $limit Query param: Maximum number of resources to return per page (max 1000). If omitted, returns all resources.
+     * @param string $page query param: Opaque cursor from a previous response's `next_page` field
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return PageCursor<ManagedAgentsGitHubRepositoryResource|ManagedAgentsFileResource|ManagedAgentsMemoryStoreResource,>
+     *
+     * @throws APIException
+     */
+    public function list(
+        string $sessionID,
+        ?int $limit = null,
+        ?string $page = null,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): PageCursor;
+
+    /**
+     * @api
+     *
+     * @param string $resourceID Path param
+     * @param string $sessionID Path param
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function delete(
+        string $resourceID,
+        string $sessionID,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): ManagedAgentsDeleteSessionResource;
+
+    /**
+     * @api
+     *
+     * @param string $sessionID Path param
+     * @param string $fileID body param: ID of a previously uploaded file
+     * @param 'file' $type Body param
+     * @param string|null $mountPath Body param: Mount path in the container. Defaults to `/mnt/session/uploads/<file_id>`.
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function add(
+        string $sessionID,
+        string $fileID,
+        string $type = 'file',
+        ?string $mountPath = null,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): ManagedAgentsFileResource;
+}

@@ -1,0 +1,415 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Services\Beta;
+
+use Anthropic\Beta\AnthropicBeta;
+use Anthropic\Beta\Sessions\BetaManagedAgentsBudgetLimit;
+use Anthropic\Beta\Sessions\BetaManagedAgentsDeletedSession;
+use Anthropic\Beta\Sessions\BetaManagedAgentsSession;
+use Anthropic\Beta\Sessions\BetaManagedAgentsSessionAgentUpdate;
+use Anthropic\Beta\Sessions\SessionArchiveParams;
+use Anthropic\Beta\Sessions\SessionCreateParams;
+use Anthropic\Beta\Sessions\SessionDeleteParams;
+use Anthropic\Beta\Sessions\SessionListParams;
+use Anthropic\Beta\Sessions\SessionListParams\Order;
+use Anthropic\Beta\Sessions\SessionListParams\Status;
+use Anthropic\Beta\Sessions\SessionRetrieveParams;
+use Anthropic\Beta\Sessions\SessionUpdateParams;
+use Anthropic\BidirectionalPageCursor;
+use Anthropic\Client;
+use Anthropic\Core\Contracts\BaseResponse;
+use Anthropic\Core\Exceptions\APIException;
+use Anthropic\Core\Implementation\ApiCallInfo;
+use Anthropic\Core\Util;
+use Anthropic\RequestOptions;
+use Anthropic\ServiceContracts\Beta\SessionsRawContract;
+
+/**
+ * @phpstan-import-type AgentShape from \Anthropic\Beta\Sessions\SessionCreateParams\Agent
+ * @phpstan-import-type BetaManagedAgentsBudgetLimitShape from \Anthropic\Beta\Sessions\BetaManagedAgentsBudgetLimit
+ * @phpstan-import-type InitialEventShape from \Anthropic\Beta\Sessions\SessionCreateParams\InitialEvent
+ * @phpstan-import-type ResourceShape from \Anthropic\Beta\Sessions\SessionCreateParams\Resource
+ * @phpstan-import-type RequestOpts from \Anthropic\RequestOptions
+ * @phpstan-import-type BetaManagedAgentsSessionAgentUpdateShape from \Anthropic\Beta\Sessions\BetaManagedAgentsSessionAgentUpdate
+ */
+final class SessionsRawService implements SessionsRawContract
+{
+    // @phpstan-ignore-next-line
+    /**
+     * @internal
+     */
+    public function __construct(private Client $client) {}
+
+    /**
+     * @api
+     *
+     * Create Session
+     *
+     * @param array{
+     *   agent: AgentShape,
+     *   environmentID: string,
+     *   budget?: BetaManagedAgentsBudgetLimit|BetaManagedAgentsBudgetLimitShape,
+     *   initialEvents?: list<InitialEventShape>,
+     *   metadata?: array<string,string>,
+     *   resources?: list<ResourceShape>,
+     *   title?: string|null,
+     *   vaultIDs?: list<string>,
+     *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>,
+     *   workspaceID?: string,
+     * }|SessionCreateParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<BetaManagedAgentsSession>
+     *
+     * @throws APIException
+     */
+    public function create(
+        array|SessionCreateParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse {
+        [$parsed, $options] = SessionCreateParams::parseRequest(
+            $params,
+            $requestOptions,
+        );
+        $header_params = [
+            'betas' => 'anthropic-beta', 'workspaceID' => 'anthropic-workspace-id',
+        ];
+        $agent = $parsed['agent'] ?? null;
+
+        // @phpstan-ignore-next-line return.type
+        return $this->client->request(
+            method: 'post',
+            path: 'v1/sessions?beta=true',
+            headers: Util::array_transform_keys(
+                array_intersect_key($parsed, array_flip(array_keys($header_params))),
+                $header_params,
+            ),
+            body: (object) array_diff_key(
+                $parsed,
+                array_flip(array_keys($header_params))
+            ),
+            options: RequestOptions::parse(
+                ['extraHeaders' => ['anthropic-beta' => 'managed-agents-2026-04-01']],
+                $options,
+            )->withApiCall(new ApiCallInfo(
+                name: 'anthropic.sessions.create',
+                route: '/v1/sessions',
+                attributes: [
+                    'gen_ai.agent.id' => is_array($agent) ? ($agent['id'] ?? null) : $agent,
+                    'anthropic.session.environment.id' => $parsed['environment_id'] ?? null,
+                ],
+                createdId: 'anthropic.session.id',
+            )),
+            convert: BetaManagedAgentsSession::class,
+        );
+    }
+
+    /**
+     * @api
+     *
+     * Get Session
+     *
+     * @param array{
+     *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>,
+     *   workspaceID?: string,
+     * }|SessionRetrieveParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<BetaManagedAgentsSession>
+     *
+     * @throws APIException
+     */
+    public function retrieve(
+        string $sessionID,
+        array|SessionRetrieveParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse {
+        [$parsed, $options] = SessionRetrieveParams::parseRequest(
+            $params,
+            $requestOptions,
+        );
+
+        // @phpstan-ignore-next-line return.type
+        return $this->client->request(
+            method: 'get',
+            path: ['v1/sessions/%1$s?beta=true', $sessionID],
+            headers: Util::array_transform_keys(
+                $parsed,
+                [
+                    'betas' => 'anthropic-beta', 'workspaceID' => 'anthropic-workspace-id',
+                ],
+            ),
+            options: RequestOptions::parse(
+                ['extraHeaders' => ['anthropic-beta' => 'managed-agents-2026-04-01']],
+                $options,
+            )->withApiCall(new ApiCallInfo(
+                name: 'anthropic.sessions.retrieve',
+                route: '/v1/sessions/{session_id}',
+                attributes: ['anthropic.session.id' => $sessionID],
+            )),
+            convert: BetaManagedAgentsSession::class,
+        );
+    }
+
+    /**
+     * @api
+     *
+     * Update Session
+     *
+     * @param string $sessionID Path param
+     * @param array{
+     *   agent?: BetaManagedAgentsSessionAgentUpdate|BetaManagedAgentsSessionAgentUpdateShape,
+     *   budget?: BetaManagedAgentsBudgetLimit|BetaManagedAgentsBudgetLimitShape|null,
+     *   metadata?: array<string,string|null>|null,
+     *   title?: string|null,
+     *   vaultIDs?: list<string>,
+     *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>,
+     *   workspaceID?: string,
+     * }|SessionUpdateParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<BetaManagedAgentsSession>
+     *
+     * @throws APIException
+     */
+    public function update(
+        string $sessionID,
+        array|SessionUpdateParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse {
+        [$parsed, $options] = SessionUpdateParams::parseRequest(
+            $params,
+            $requestOptions,
+        );
+        $header_params = [
+            'betas' => 'anthropic-beta', 'workspaceID' => 'anthropic-workspace-id',
+        ];
+
+        // @phpstan-ignore-next-line return.type
+        return $this->client->request(
+            method: 'post',
+            path: ['v1/sessions/%1$s?beta=true', $sessionID],
+            headers: Util::array_transform_keys(
+                array_intersect_key($parsed, array_flip(array_keys($header_params))),
+                $header_params,
+            ),
+            body: (object) array_diff_key(
+                $parsed,
+                array_flip(array_keys($header_params))
+            ),
+            options: RequestOptions::parse(
+                ['extraHeaders' => ['anthropic-beta' => 'managed-agents-2026-04-01']],
+                $options,
+            )->withApiCall(new ApiCallInfo(
+                name: 'anthropic.sessions.update',
+                route: '/v1/sessions/{session_id}',
+                attributes: ['anthropic.session.id' => $sessionID],
+            )),
+            convert: BetaManagedAgentsSession::class,
+        );
+    }
+
+    /**
+     * @api
+     *
+     * List Sessions
+     *
+     * @param array{
+     *   agentID?: string,
+     *   agentVersion?: int,
+     *   createdAtGt?: \DateTimeInterface,
+     *   createdAtGte?: \DateTimeInterface,
+     *   createdAtLt?: \DateTimeInterface,
+     *   createdAtLte?: \DateTimeInterface,
+     *   deploymentID?: string,
+     *   includeArchived?: bool,
+     *   limit?: int,
+     *   memoryStoreID?: string,
+     *   order?: Order|value-of<Order>,
+     *   page?: string,
+     *   statuses?: list<Status|value-of<Status>>,
+     *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>,
+     *   workspaceID?: string,
+     * }|SessionListParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<BidirectionalPageCursor<BetaManagedAgentsSession>>
+     *
+     * @throws APIException
+     */
+    public function list(
+        array|SessionListParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse {
+        [$parsed, $options] = SessionListParams::parseRequest(
+            $params,
+            $requestOptions,
+        );
+        $query_params = array_flip(
+            [
+                'agentID',
+                'agentVersion',
+                'createdAtGt',
+                'createdAtGte',
+                'createdAtLt',
+                'createdAtLte',
+                'deploymentID',
+                'includeArchived',
+                'limit',
+                'memoryStoreID',
+                'order',
+                'page',
+                'statuses',
+            ],
+        );
+
+        /** @var array<string,string> */
+        $header_params = array_diff_key($parsed, $query_params);
+
+        // @phpstan-ignore-next-line return.type
+        return $this->client->request(
+            method: 'get',
+            path: 'v1/sessions?beta=true',
+            query: Util::array_transform_keys(
+                array_intersect_key($parsed, $query_params),
+                [
+                    'agentID' => 'agent_id',
+                    'agentVersion' => 'agent_version',
+                    'createdAtGt' => 'created_at[gt]',
+                    'createdAtGte' => 'created_at[gte]',
+                    'createdAtLt' => 'created_at[lt]',
+                    'createdAtLte' => 'created_at[lte]',
+                    'deploymentID' => 'deployment_id',
+                    'includeArchived' => 'include_archived',
+                    'memoryStoreID' => 'memory_store_id',
+                ],
+            ),
+            headers: Util::array_transform_keys(
+                $header_params,
+                [
+                    'betas' => 'anthropic-beta', 'workspaceID' => 'anthropic-workspace-id',
+                ],
+            ),
+            options: RequestOptions::parse(
+                ['extraHeaders' => ['anthropic-beta' => 'managed-agents-2026-04-01']],
+                $options,
+            )->withApiCall(new ApiCallInfo(
+                name: 'anthropic.sessions.list',
+                route: '/v1/sessions',
+                query: [
+                    'agent_id',
+                    'agent_version',
+                    'created_at[gt]',
+                    'created_at[gte]',
+                    'created_at[lt]',
+                    'created_at[lte]',
+                    'deployment_id',
+                    'include_archived',
+                    'limit',
+                    'memory_store_id',
+                    'order',
+                    'page',
+                    'statuses',
+                ],
+            )),
+            convert: BetaManagedAgentsSession::class,
+            page: BidirectionalPageCursor::class,
+        );
+    }
+
+    /**
+     * @api
+     *
+     * Delete Session
+     *
+     * @param array{
+     *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>,
+     *   workspaceID?: string,
+     * }|SessionDeleteParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<BetaManagedAgentsDeletedSession>
+     *
+     * @throws APIException
+     */
+    public function delete(
+        string $sessionID,
+        array|SessionDeleteParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse {
+        [$parsed, $options] = SessionDeleteParams::parseRequest(
+            $params,
+            $requestOptions,
+        );
+
+        // @phpstan-ignore-next-line return.type
+        return $this->client->request(
+            method: 'delete',
+            path: ['v1/sessions/%1$s?beta=true', $sessionID],
+            headers: Util::array_transform_keys(
+                $parsed,
+                [
+                    'betas' => 'anthropic-beta', 'workspaceID' => 'anthropic-workspace-id',
+                ],
+            ),
+            options: RequestOptions::parse(
+                ['extraHeaders' => ['anthropic-beta' => 'managed-agents-2026-04-01']],
+                $options,
+            )->withApiCall(new ApiCallInfo(
+                name: 'anthropic.sessions.delete',
+                route: '/v1/sessions/{session_id}',
+                attributes: ['anthropic.session.id' => $sessionID],
+            )),
+            convert: BetaManagedAgentsDeletedSession::class,
+        );
+    }
+
+    /**
+     * @api
+     *
+     * Archive Session
+     *
+     * @param array{
+     *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>,
+     *   workspaceID?: string,
+     * }|SessionArchiveParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<BetaManagedAgentsSession>
+     *
+     * @throws APIException
+     */
+    public function archive(
+        string $sessionID,
+        array|SessionArchiveParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse {
+        [$parsed, $options] = SessionArchiveParams::parseRequest(
+            $params,
+            $requestOptions,
+        );
+
+        // @phpstan-ignore-next-line return.type
+        return $this->client->request(
+            method: 'post',
+            path: ['v1/sessions/%1$s/archive?beta=true', $sessionID],
+            headers: Util::array_transform_keys(
+                $parsed,
+                [
+                    'betas' => 'anthropic-beta', 'workspaceID' => 'anthropic-workspace-id',
+                ],
+            ),
+            options: RequestOptions::parse(
+                ['extraHeaders' => ['anthropic-beta' => 'managed-agents-2026-04-01']],
+                $options,
+            )->withApiCall(new ApiCallInfo(
+                name: 'anthropic.sessions.archive',
+                route: '/v1/sessions/{session_id}/archive',
+                attributes: ['anthropic.session.id' => $sessionID],
+            )),
+            convert: BetaManagedAgentsSession::class,
+        );
+    }
+}

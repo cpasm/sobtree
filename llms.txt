@@ -1,0 +1,33 @@
+# Sobtree
+
+> Ayudamos a pequeñas y medianas empresas a implantar IA en su negocio con casos de uso que se pagan solos. Precio cerrado antes de empezar, sin sorpresas. Calcula tu ahorro y lo que te costaría.
+
+Sobtree ayuda a pequeñas y medianas empresas a implantar IA (ChatGPT, Claude, Gemini, Microsoft Copilot y automatizaciones). Precio cerrado antes de empezar, sin extras, y sin comisiones de licencias. Trabaja casi todo con IA, por eso cobra menos. El punto de entrada es un diagnóstico IA exprés con el informe en un máximo de 10 días laborables (490 € + IVA. Si contratas el proyecto en los 30 días siguientes a la entrega del informe, te descontamos los 490 €. Se aplica solo a proyectos (no a formación, acompañamiento ni licencias), uno por empresa, no es acumulable y no se devuelve en dinero). Sede en Madrid; trabaja en remoto para toda España.
+
+## Servicios
+
+- **Diagnóstico IA exprés** (Máximo 10 días laborables · 490 € + IVA. Si contratas el proyecto en los 30 días siguientes a la entrega del informe, te descontamos los 490 €. Se aplica solo a proyectos (no a formación, acompañamiento ni licencias), uno por empresa, no es acumulable y no se devuelve en dinero.): Revisamos cómo trabajáis, detectamos las tareas que más tiempo os comen y salís con 3 casos de uso priorizados, con su ahorro estimado y su coste.
+- **Primer caso de uso en marcha** (2–3 semanas · 600–1.200 € según el caso, precio cerrado antes de empezar): Implantamos un caso de uso completo (atención al cliente, presupuestos, facturas, contenidos…) con herramientas que ya existen, sin desarrollos a medida caros.
+- **Formación de tu equipo** (Desde 120 €): Tu gente aprende a usar la IA en su día a día con ejemplos de vuestro propio trabajo, no con teoría.
+- **Acompañamiento mensual** (Desde 240 €/mes, cuota fija): Un caso de uso nuevo cada mes, ajustes y soporte. Sin permanencia.
+
+## Páginas
+
+- [Inicio](https://sobtree.com/): servicios, casos de uso por sector, método de trabajo, autodiagnóstico, FAQ y contacto.
+- [Calculadora de ahorro](https://sobtree.com/calculadora/): en 5 preguntas, horquilla de ahorro anual con IA y precio cerrado orientativo de la implantación.
+- [Análisis](https://sobtree.com/analisis/): guías para implantar IA en una pyme: por dónde empezar, costes, ahorro y ley de IA.
+
+## Análisis
+
+- [Cuánto cuesta implantar IA en una pyme (y de qué depende)](https://sobtree.com/analisis/cuanto-cuesta-implantar-ia-en-una-pyme/): Cuánto cuesta implantar IA en una pyme: diagnóstico, puesta en marcha y licencias, de qué depende el precio y cómo saber si te compensa antes de gastar nada.
+- [Cómo empezar con IA en tu pyme sin tirar el dinero](https://sobtree.com/analisis/como-empezar-con-ia-en-tu-pyme/): Según el INE, el 33,6 % de las empresas españolas de 10 o más empleados usó IA en el primer trimestre de 2026, y el 21,4 % de las de menos de 10 empleados con conexión a Internet.
+- [La ley europea de IA y tu pyme: qué te exige ya (y qué no)](https://sobtree.com/analisis/ley-de-ia-que-exige-a-tu-pyme/): Desde el 2 de agosto de 2026, si un chatbot atiende a tus clientes, tiene que avisar de que es una IA. Qué más te afecta, qué se ha retrasado a 2027 y qué hacer.
+
+## Optional
+
+- [Contenido completo](https://sobtree.com/llms-full.txt): servicios, método, FAQ y texto íntegro del Radar y los análisis.
+
+## Contacto
+
+- Email: info@sobtree.com
+- Contrata y empieza a ahorrar: https://sobtree.com/contratar/

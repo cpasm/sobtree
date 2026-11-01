@@ -1,0 +1,93 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Beta\Agents;
+
+use Anthropic\Beta\Agents\BetaManagedAgentsAgentToolsetDefaultConfigParams\PermissionPolicy;
+use Anthropic\Core\Attributes\Optional;
+use Anthropic\Core\Concerns\SdkModel;
+use Anthropic\Core\Contracts\BaseModel;
+
+/**
+ * Default configuration for all tools in a toolset.
+ *
+ * @phpstan-import-type PermissionPolicyShape from \Anthropic\Beta\Agents\BetaManagedAgentsAgentToolsetDefaultConfigParams\PermissionPolicy
+ * @phpstan-import-type PermissionPolicyVariants from \Anthropic\Beta\Agents\BetaManagedAgentsAgentToolsetDefaultConfigParams\PermissionPolicy
+ *
+ * @phpstan-type BetaManagedAgentsAgentToolsetDefaultConfigParamsShape = array{
+ *   enabled?: bool|null, permissionPolicy?: PermissionPolicyShape|null
+ * }
+ */
+final class BetaManagedAgentsAgentToolsetDefaultConfigParams implements BaseModel
+{
+    /** @use SdkModel<BetaManagedAgentsAgentToolsetDefaultConfigParamsShape> */
+    use SdkModel;
+
+    /**
+     * Whether tools are enabled and available to Claude by default. Defaults to true if not specified.
+     */
+    #[Optional(nullable: true)]
+    public ?bool $enabled;
+
+    /**
+     * Default permission policy for tools. Controls whether tool calls are auto-approved or require confirmation.
+     *
+     * @var PermissionPolicyVariants|null $permissionPolicy
+     */
+    #[Optional(
+        'permission_policy',
+        union: PermissionPolicy::class,
+        nullable: true
+    )]
+    public BetaManagedAgentsAlwaysAllowPolicy|BetaManagedAgentsAlwaysAskPolicy|BetaManagedAgentsAutoPolicy|null $permissionPolicy;
+
+    public function __construct()
+    {
+        $this->initialize();
+    }
+
+    /**
+     * Construct an instance from the required parameters.
+     *
+     * You must use named parameters to construct any parameters with a default value.
+     *
+     * @param PermissionPolicyShape|null $permissionPolicy
+     */
+    public static function with(
+        ?bool $enabled = null,
+        BetaManagedAgentsAlwaysAllowPolicy|array|BetaManagedAgentsAlwaysAskPolicy|BetaManagedAgentsAutoPolicy|null $permissionPolicy = null,
+    ): self {
+        $self = new self;
+
+        null !== $enabled && $self['enabled'] = $enabled;
+        null !== $permissionPolicy && $self['permissionPolicy'] = $permissionPolicy;
+
+        return $self;
+    }
+
+    /**
+     * Whether tools are enabled and available to Claude by default. Defaults to true if not specified.
+     */
+    public function withEnabled(?bool $enabled): self
+    {
+        $self = clone $this;
+        $self['enabled'] = $enabled;
+
+        return $self;
+    }
+
+    /**
+     * Default permission policy for tools. Controls whether tool calls are auto-approved or require confirmation.
+     *
+     * @param PermissionPolicyShape|null $permissionPolicy
+     */
+    public function withPermissionPolicy(
+        BetaManagedAgentsAlwaysAllowPolicy|array|BetaManagedAgentsAlwaysAskPolicy|BetaManagedAgentsAutoPolicy|null $permissionPolicy,
+    ): self {
+        $self = clone $this;
+        $self['permissionPolicy'] = $permissionPolicy;
+
+        return $self;
+    }
+}

@@ -1,0 +1,42 @@
+name: C# Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  id-token: write
+
+jobs:
+  dotnet:
+    name: C# Release
+    runs-on: ubuntu-latest
+    environment: Release
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 5.0.x
+
+      - name: Install dependencies
+        run: |
+          dotnet restore
+        working-directory: libraries/csharp
+
+      - name: Build
+        run: |
+          dotnet build --configuration Release StandardWebhooks --no-restore
+        working-directory: libraries/csharp
+
+      - name: Release
+        run: |
+          dotnet nuget push "$(find StandardWebhooks/bin/Release/StandardWebhooks.*.nupkg)" \
+            --api-key "$NUGET_API_KEY" \
+            --source "https://api.nuget.org/v3/index.json"
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        working-directory: libraries/csharp

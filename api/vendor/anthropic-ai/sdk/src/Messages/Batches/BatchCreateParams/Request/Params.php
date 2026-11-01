@@ -1,0 +1,765 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Messages\Batches\BatchCreateParams\Request;
+
+use Anthropic\Core\Attributes\Optional;
+use Anthropic\Core\Attributes\Required;
+use Anthropic\Core\Concerns\SdkModel;
+use Anthropic\Core\Contracts\BaseModel;
+use Anthropic\Messages\Batches\BatchCreateParams\Request\Params\ServiceTier;
+use Anthropic\Messages\Batches\BatchCreateParams\Request\Params\Speed;
+use Anthropic\Messages\Batches\BatchCreateParams\Request\Params\System;
+use Anthropic\Messages\CacheControlEphemeral;
+use Anthropic\Messages\ContainerParams;
+use Anthropic\Messages\DiagnosticsParam;
+use Anthropic\Messages\MessageParam;
+use Anthropic\Messages\Metadata;
+use Anthropic\Messages\Model;
+use Anthropic\Messages\OutputConfig;
+use Anthropic\Messages\ThinkingConfigAdaptive;
+use Anthropic\Messages\ThinkingConfigBetweenTools;
+use Anthropic\Messages\ThinkingConfigDisabled;
+use Anthropic\Messages\ThinkingConfigEnabled;
+use Anthropic\Messages\ThinkingConfigParam;
+use Anthropic\Messages\ToolChoice;
+use Anthropic\Messages\ToolChoiceAny;
+use Anthropic\Messages\ToolChoiceAuto;
+use Anthropic\Messages\ToolChoiceNone;
+use Anthropic\Messages\ToolChoiceTool;
+use Anthropic\Messages\ToolUnion;
+
+/**
+ * Messages API creation parameters for the individual request.
+ *
+ * See the [Messages API reference](https://platform.claude.com/docs/en/api/messages) for full documentation on available parameters.
+ *
+ * @phpstan-import-type MessageParamShape from \Anthropic\Messages\MessageParam
+ * @phpstan-import-type CacheControlEphemeralShape from \Anthropic\Messages\CacheControlEphemeral
+ * @phpstan-import-type MessageCreateParamsContainerShape from \Anthropic\Messages\MessageCreateParamsContainer
+ * @phpstan-import-type DiagnosticsParamShape from \Anthropic\Messages\DiagnosticsParam
+ * @phpstan-import-type MetadataShape from \Anthropic\Messages\Metadata
+ * @phpstan-import-type OutputConfigShape from \Anthropic\Messages\OutputConfig
+ * @phpstan-import-type SystemShape from \Anthropic\Messages\Batches\BatchCreateParams\Request\Params\System
+ * @phpstan-import-type ThinkingConfigParamShape from \Anthropic\Messages\ThinkingConfigParam
+ * @phpstan-import-type ToolChoiceShape from \Anthropic\Messages\ToolChoice
+ * @phpstan-import-type ToolUnionShape from \Anthropic\Messages\ToolUnion
+ * @phpstan-import-type MessageParamVariants from \Anthropic\Messages\MessageParam
+ * @phpstan-import-type MessageCreateParamsContainerVariants from \Anthropic\Messages\MessageCreateParamsContainer
+ * @phpstan-import-type SystemVariants from \Anthropic\Messages\Batches\BatchCreateParams\Request\Params\System
+ * @phpstan-import-type ThinkingConfigParamVariants from \Anthropic\Messages\ThinkingConfigParam
+ * @phpstan-import-type ToolChoiceVariants from \Anthropic\Messages\ToolChoice
+ * @phpstan-import-type ToolUnionVariants from \Anthropic\Messages\ToolUnion
+ *
+ * @phpstan-type ParamsShape = array{
+ *   maxTokens: int,
+ *   messages: list<MessageParamShape>,
+ *   model: string|Model|value-of<Model>,
+ *   cacheControl?: null|CacheControlEphemeral|CacheControlEphemeralShape,
+ *   container?: MessageCreateParamsContainerShape|null,
+ *   diagnostics?: null|DiagnosticsParam|DiagnosticsParamShape,
+ *   inferenceGeo?: string|null,
+ *   metadata?: null|Metadata|MetadataShape,
+ *   outputConfig?: null|OutputConfig|OutputConfigShape,
+ *   serviceTier?: null|ServiceTier|value-of<ServiceTier>,
+ *   speed?: null|Speed|value-of<Speed>,
+ *   stopSequences?: list<string>|null,
+ *   stream?: bool|null,
+ *   system?: SystemShape|null,
+ *   thinking?: ThinkingConfigParamShape|null,
+ *   toolChoice?: ToolChoiceShape|null,
+ *   tools?: list<ToolUnionShape>|null,
+ * }
+ */
+final class Params implements BaseModel
+{
+    /** @use SdkModel<ParamsShape> */
+    use SdkModel;
+
+    /**
+     * The maximum number of tokens to generate before stopping.
+     *
+     * Note that our models may stop _before_ reaching this maximum. This parameter only specifies the absolute maximum number of tokens to generate.
+     *
+     * Set to `0` to populate the [prompt cache](https://platform.claude.com/docs/en/build-with-claude/prompt-caching#pre-warming-the-cache) without generating a response.
+     *
+     * Different models have different maximum values for this parameter.  See [models](https://platform.claude.com/docs/en/about-claude/models/overview) for details.
+     */
+    #[Required('max_tokens')]
+    public int $maxTokens;
+
+    /**
+     * Input messages.
+     *
+     * Our models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.
+     *
+     * Each input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.
+     *
+     * If the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).
+     *
+     * Example with a single `user` message:
+     *
+     * ```json
+     * [{"role": "user", "content": "Hello, Claude"}]
+     * ```
+     *
+     * Example with multiple conversational turns:
+     *
+     * ```json
+     * [
+     *   {"role": "user", "content": "Hello there."},
+     *   {"role": "assistant", "content": "Hi, I'm Claude. How can I help you?"},
+     *   {"role": "user", "content": "Can you explain LLMs in plain English?"},
+     * ]
+     * ```
+     *
+     * Example with a partially-filled response from Claude, for models that support prefill:
+     *
+     * ```json
+     * [
+     *   {"role": "user", "content": "What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun"},
+     *   {"role": "assistant", "content": "The best answer is ("},
+     * ]
+     * ```
+     *
+     * Each input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `"text"`. The following input messages are equivalent:
+     *
+     * ```json
+     * {"role": "user", "content": "Hello, Claude"}
+     * ```
+     *
+     * ```json
+     * {"role": "user", "content": [{"type": "text", "text": "Hello, Claude"}]}
+     * ```
+     *
+     * See [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).
+     *
+     * Note that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter.
+     *
+     * There is a limit of 100,000 messages in a single request.
+     *
+     * @var list<MessageParamVariants> $messages
+     */
+    #[Required(list: MessageParam::class)]
+    public array $messages;
+
+    /**
+     * The model that will complete your prompt.
+     *
+     * See [models](https://docs.anthropic.com/en/docs/models-overview) for additional details and options.
+     *
+     * @var string|value-of<Model> $model
+     */
+    #[Required(enum: Model::class)]
+    public string $model;
+
+    /**
+     * Top-level cache control automatically applies a cache_control marker to the last cacheable block in the request.
+     */
+    #[Optional('cache_control', nullable: true)]
+    public ?CacheControlEphemeral $cacheControl;
+
+    /**
+     * Container identifier for reuse across requests.
+     *
+     * @var MessageCreateParamsContainerVariants|null $container
+     */
+    #[Optional(nullable: true)]
+    public string|ContainerParams|null $container;
+
+    /**
+     * Request-level diagnostics. Supply `previous_message_id` to have the response include `diagnostics.cache_miss_reason` explaining any prompt-cache divergence from that prior request.
+     */
+    #[Optional(nullable: true)]
+    public ?DiagnosticsParam $diagnostics;
+
+    /**
+     * Specifies the geographic region for inference processing. If not specified, the workspace's `default_inference_geo` is used.
+     */
+    #[Optional('inference_geo', nullable: true)]
+    public ?string $inferenceGeo;
+
+    /**
+     * An object describing metadata about the request.
+     */
+    #[Optional]
+    public ?Metadata $metadata;
+
+    /**
+     * Configuration options for the model's output, such as the output format.
+     */
+    #[Optional('output_config')]
+    public ?OutputConfig $outputConfig;
+
+    /**
+     * Determines whether to use priority capacity (if available) or standard capacity for this request.
+     *
+     * Anthropic offers different levels of service for your API requests. See [service-tiers](https://platform.claude.com/docs/en/api/service-tiers) for details.
+     *
+     * @var value-of<ServiceTier>|null $serviceTier
+     */
+    #[Optional('service_tier', enum: ServiceTier::class)]
+    public ?string $serviceTier;
+
+    /**
+     * The inference speed mode for this request. `"fast"` enables high output-tokens-per-second inference.
+     *
+     * Some models require the `fast-mode-2026-02-01` beta header for any `speed` value. See [fast mode](https://platform.claude.com/docs/en/build-with-claude/fast-mode) for which models.
+     *
+     * @var value-of<Speed>|null $speed
+     */
+    #[Optional(enum: Speed::class, nullable: true)]
+    public ?string $speed;
+
+    /**
+     * Custom text sequences that will cause the model to stop generating.
+     *
+     * Our models will normally stop when they have naturally completed their turn, which will result in a response `stop_reason` of `"end_turn"`.
+     *
+     * If you want the model to stop generating when it encounters custom strings of text, you can use the `stop_sequences` parameter. If the model encounters one of the custom sequences, the response `stop_reason` value will be `"stop_sequence"` and the response `stop_sequence` value will contain the matched stop sequence.
+     *
+     * @var list<string>|null $stopSequences
+     */
+    #[Optional('stop_sequences', list: 'string')]
+    public ?array $stopSequences;
+
+    /**
+     * Whether to incrementally stream the response using server-sent events. When `true`, SDKs return a raw event stream.
+     *
+     * In the TypeScript, Python and Ruby SDKs, the recommended way to stream is `messages.stream()`. It sets `stream` for you and accumulates the events into the final message. See [Streaming with SDKs](https://platform.claude.com/docs/en/build-with-claude/streaming#streaming-with-sdks) for an example in each language.
+     */
+    #[Optional]
+    public ?bool $stream;
+
+    /**
+     * System prompt.
+     *
+     * A system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role).
+     *
+     * @var SystemVariants|null $system
+     */
+    #[Optional(union: System::class)]
+    public string|array|null $system;
+
+    /**
+     * Configuration for Claude's thinking.
+     *
+     * With `{"type": "adaptive"}`, Claude decides when and how much to think. With `{"type": "enabled"}` (manual extended thinking), you set a `budget_tokens` of at least 1,024. Thinking tokens count toward your `max_tokens` limit.
+     *
+     * Which `type` values are accepted, and what happens when you omit `thinking`, depend on the model. See [thinking](https://platform.claude.com/docs/en/build-with-claude/thinking#configuring-thinking) for each model's behavior.
+     *
+     * @var ThinkingConfigParamVariants|null $thinking
+     */
+    #[Optional(union: ThinkingConfigParam::class)]
+    public ThinkingConfigEnabled|ThinkingConfigDisabled|ThinkingConfigBetweenTools|ThinkingConfigAdaptive|null $thinking;
+
+    /**
+     * How the model should use the provided tools. The model can use a specific tool, any available tool, decide by itself, or not use tools at all.
+     *
+     * @var ToolChoiceVariants|null $toolChoice
+     */
+    #[Optional('tool_choice', union: ToolChoice::class)]
+    public ToolChoiceAuto|ToolChoiceAny|ToolChoiceTool|ToolChoiceNone|null $toolChoice;
+
+    /**
+     * Definitions of tools that the model may use.
+     *
+     * If you include `tools` in your API request, the model may return `tool_use` content blocks that represent the model's use of those tools. You can then run those tools using the tool input generated by the model and then optionally return results back to the model using `tool_result` content blocks.
+     *
+     * There are two types of tools: **client tools** and **server tools**. The behavior described below applies to client tools. For [server tools](https://platform.claude.com/docs/en/agents-and-tools/tool-use/server-tools), see their individual documentation as each has its own behavior (e.g., the [web search tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool)).
+     *
+     * Each tool definition includes:
+     *
+     * * `name`: Name of the tool.
+     * * `description`: Optional, but strongly-recommended description of the tool.
+     * * `input_schema`: [JSON schema](https://json-schema.org/draft/2020-12) for the tool `input` shape that the model will produce in `tool_use` output content blocks.
+     *
+     * For example, if you defined `tools` as:
+     *
+     * ```json
+     * [
+     *   {
+     *     "name": "get_stock_price",
+     *     "description": "Get the current stock price for a given ticker symbol.",
+     *     "input_schema": {
+     *       "type": "object",
+     *       "properties": {
+     *         "ticker": {
+     *           "type": "string",
+     *           "description": "The stock ticker symbol, e.g. AAPL for Apple Inc."
+     *         }
+     *       },
+     *       "required": ["ticker"]
+     *     }
+     *   }
+     * ]
+     * ```
+     *
+     * And then asked the model "What's the S&P 500 at today?", the model might produce `tool_use` content blocks in the response like this:
+     *
+     * ```json
+     * [
+     *   {
+     *     "type": "tool_use",
+     *     "id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",
+     *     "name": "get_stock_price",
+     *     "input": { "ticker": "^GSPC" }
+     *   }
+     * ]
+     * ```
+     *
+     * You might then run your `get_stock_price` tool with `{"ticker": "^GSPC"}` as an input, and return the following back to the model in a subsequent `user` message:
+     *
+     * ```json
+     * [
+     *   {
+     *     "type": "tool_result",
+     *     "tool_use_id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",
+     *     "content": "259.75 USD"
+     *   }
+     * ]
+     * ```
+     *
+     * Tools can be used for workflows that include running client-side tools and functions, or more generally whenever you want the model to produce a particular JSON structure of output.
+     *
+     * See our [guide](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview) for more details.
+     *
+     * @var list<ToolUnionVariants>|null $tools
+     */
+    #[Optional(list: ToolUnion::class)]
+    public ?array $tools;
+
+    /**
+     * `new Params()` is missing required properties by the API.
+     *
+     * To enforce required parameters use
+     * ```
+     * Params::with(maxTokens: ..., messages: ..., model: ...)
+     * ```
+     *
+     * Otherwise ensure the following setters are called
+     *
+     * ```
+     * (new Params())->withMaxTokens(...)->withMessages(...)->withModel(...)
+     * ```
+     */
+    public function __construct()
+    {
+        $this->initialize();
+    }
+
+    /**
+     * Construct an instance from the required parameters.
+     *
+     * You must use named parameters to construct any parameters with a default value.
+     *
+     * @param list<MessageParamShape> $messages
+     * @param string|Model|value-of<Model> $model
+     * @param CacheControlEphemeral|CacheControlEphemeralShape|null $cacheControl
+     * @param MessageCreateParamsContainerShape|null $container
+     * @param DiagnosticsParam|DiagnosticsParamShape|null $diagnostics
+     * @param Metadata|MetadataShape|null $metadata
+     * @param OutputConfig|OutputConfigShape|null $outputConfig
+     * @param ServiceTier|value-of<ServiceTier>|null $serviceTier
+     * @param Speed|value-of<Speed>|null $speed
+     * @param list<string>|null $stopSequences
+     * @param SystemShape|null $system
+     * @param ThinkingConfigParamShape|null $thinking
+     * @param ToolChoiceShape|null $toolChoice
+     * @param list<ToolUnionShape>|null $tools
+     */
+    public static function with(
+        int $maxTokens,
+        array $messages,
+        Model|string $model,
+        CacheControlEphemeral|array|null $cacheControl = null,
+        string|ContainerParams|array|null $container = null,
+        DiagnosticsParam|array|null $diagnostics = null,
+        ?string $inferenceGeo = null,
+        Metadata|array|null $metadata = null,
+        OutputConfig|array|null $outputConfig = null,
+        ServiceTier|string|null $serviceTier = null,
+        Speed|string|null $speed = null,
+        ?array $stopSequences = null,
+        ?bool $stream = null,
+        string|array|null $system = null,
+        ThinkingConfigEnabled|array|ThinkingConfigDisabled|ThinkingConfigBetweenTools|ThinkingConfigAdaptive|null $thinking = null,
+        ToolChoiceAuto|array|ToolChoiceAny|ToolChoiceTool|ToolChoiceNone|null $toolChoice = null,
+        ?array $tools = null,
+    ): self {
+        $self = new self;
+
+        $self['maxTokens'] = $maxTokens;
+        $self['messages'] = $messages;
+        $self['model'] = $model;
+
+        null !== $cacheControl && $self['cacheControl'] = $cacheControl;
+        null !== $container && $self['container'] = $container;
+        null !== $diagnostics && $self['diagnostics'] = $diagnostics;
+        null !== $inferenceGeo && $self['inferenceGeo'] = $inferenceGeo;
+        null !== $metadata && $self['metadata'] = $metadata;
+        null !== $outputConfig && $self['outputConfig'] = $outputConfig;
+        null !== $serviceTier && $self['serviceTier'] = $serviceTier;
+        null !== $speed && $self['speed'] = $speed;
+        null !== $stopSequences && $self['stopSequences'] = $stopSequences;
+        null !== $stream && $self['stream'] = $stream;
+        null !== $system && $self['system'] = $system;
+        null !== $thinking && $self['thinking'] = $thinking;
+        null !== $toolChoice && $self['toolChoice'] = $toolChoice;
+        null !== $tools && $self['tools'] = $tools;
+
+        return $self;
+    }
+
+    /**
+     * The maximum number of tokens to generate before stopping.
+     *
+     * Note that our models may stop _before_ reaching this maximum. This parameter only specifies the absolute maximum number of tokens to generate.
+     *
+     * Set to `0` to populate the [prompt cache](https://platform.claude.com/docs/en/build-with-claude/prompt-caching#pre-warming-the-cache) without generating a response.
+     *
+     * Different models have different maximum values for this parameter.  See [models](https://platform.claude.com/docs/en/about-claude/models/overview) for details.
+     */
+    public function withMaxTokens(int $maxTokens): self
+    {
+        $self = clone $this;
+        $self['maxTokens'] = $maxTokens;
+
+        return $self;
+    }
+
+    /**
+     * Input messages.
+     *
+     * Our models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.
+     *
+     * Each input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.
+     *
+     * If the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).
+     *
+     * Example with a single `user` message:
+     *
+     * ```json
+     * [{"role": "user", "content": "Hello, Claude"}]
+     * ```
+     *
+     * Example with multiple conversational turns:
+     *
+     * ```json
+     * [
+     *   {"role": "user", "content": "Hello there."},
+     *   {"role": "assistant", "content": "Hi, I'm Claude. How can I help you?"},
+     *   {"role": "user", "content": "Can you explain LLMs in plain English?"},
+     * ]
+     * ```
+     *
+     * Example with a partially-filled response from Claude, for models that support prefill:
+     *
+     * ```json
+     * [
+     *   {"role": "user", "content": "What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun"},
+     *   {"role": "assistant", "content": "The best answer is ("},
+     * ]
+     * ```
+     *
+     * Each input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `"text"`. The following input messages are equivalent:
+     *
+     * ```json
+     * {"role": "user", "content": "Hello, Claude"}
+     * ```
+     *
+     * ```json
+     * {"role": "user", "content": [{"type": "text", "text": "Hello, Claude"}]}
+     * ```
+     *
+     * See [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).
+     *
+     * Note that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter.
+     *
+     * There is a limit of 100,000 messages in a single request.
+     *
+     * @param list<MessageParamShape> $messages
+     */
+    public function withMessages(array $messages): self
+    {
+        $self = clone $this;
+        $self['messages'] = $messages;
+
+        return $self;
+    }
+
+    /**
+     * The model that will complete your prompt.
+     *
+     * See [models](https://docs.anthropic.com/en/docs/models-overview) for additional details and options.
+     *
+     * @param string|Model|value-of<Model> $model
+     */
+    public function withModel(Model|string $model): self
+    {
+        $self = clone $this;
+        $self['model'] = $model;
+
+        return $self;
+    }
+
+    /**
+     * Top-level cache control automatically applies a cache_control marker to the last cacheable block in the request.
+     *
+     * @param CacheControlEphemeral|CacheControlEphemeralShape|null $cacheControl
+     */
+    public function withCacheControl(
+        CacheControlEphemeral|array|null $cacheControl
+    ): self {
+        $self = clone $this;
+        $self['cacheControl'] = $cacheControl;
+
+        return $self;
+    }
+
+    /**
+     * Container identifier for reuse across requests.
+     *
+     * @param MessageCreateParamsContainerShape|null $container
+     */
+    public function withContainer(
+        string|ContainerParams|array|null $container
+    ): self {
+        $self = clone $this;
+        $self['container'] = $container;
+
+        return $self;
+    }
+
+    /**
+     * Request-level diagnostics. Supply `previous_message_id` to have the response include `diagnostics.cache_miss_reason` explaining any prompt-cache divergence from that prior request.
+     *
+     * @param DiagnosticsParam|DiagnosticsParamShape|null $diagnostics
+     */
+    public function withDiagnostics(
+        DiagnosticsParam|array|null $diagnostics
+    ): self {
+        $self = clone $this;
+        $self['diagnostics'] = $diagnostics;
+
+        return $self;
+    }
+
+    /**
+     * Specifies the geographic region for inference processing. If not specified, the workspace's `default_inference_geo` is used.
+     */
+    public function withInferenceGeo(?string $inferenceGeo): self
+    {
+        $self = clone $this;
+        $self['inferenceGeo'] = $inferenceGeo;
+
+        return $self;
+    }
+
+    /**
+     * An object describing metadata about the request.
+     *
+     * @param Metadata|MetadataShape $metadata
+     */
+    public function withMetadata(Metadata|array $metadata): self
+    {
+        $self = clone $this;
+        $self['metadata'] = $metadata;
+
+        return $self;
+    }
+
+    /**
+     * Configuration options for the model's output, such as the output format.
+     *
+     * @param OutputConfig|OutputConfigShape $outputConfig
+     */
+    public function withOutputConfig(OutputConfig|array $outputConfig): self
+    {
+        $self = clone $this;
+        $self['outputConfig'] = $outputConfig;
+
+        return $self;
+    }
+
+    /**
+     * Determines whether to use priority capacity (if available) or standard capacity for this request.
+     *
+     * Anthropic offers different levels of service for your API requests. See [service-tiers](https://platform.claude.com/docs/en/api/service-tiers) for details.
+     *
+     * @param ServiceTier|value-of<ServiceTier> $serviceTier
+     */
+    public function withServiceTier(ServiceTier|string $serviceTier): self
+    {
+        $self = clone $this;
+        $self['serviceTier'] = $serviceTier;
+
+        return $self;
+    }
+
+    /**
+     * The inference speed mode for this request. `"fast"` enables high output-tokens-per-second inference.
+     *
+     * Some models require the `fast-mode-2026-02-01` beta header for any `speed` value. See [fast mode](https://platform.claude.com/docs/en/build-with-claude/fast-mode) for which models.
+     *
+     * @param Speed|value-of<Speed>|null $speed
+     */
+    public function withSpeed(Speed|string|null $speed): self
+    {
+        $self = clone $this;
+        $self['speed'] = $speed;
+
+        return $self;
+    }
+
+    /**
+     * Custom text sequences that will cause the model to stop generating.
+     *
+     * Our models will normally stop when they have naturally completed their turn, which will result in a response `stop_reason` of `"end_turn"`.
+     *
+     * If you want the model to stop generating when it encounters custom strings of text, you can use the `stop_sequences` parameter. If the model encounters one of the custom sequences, the response `stop_reason` value will be `"stop_sequence"` and the response `stop_sequence` value will contain the matched stop sequence.
+     *
+     * @param list<string> $stopSequences
+     */
+    public function withStopSequences(array $stopSequences): self
+    {
+        $self = clone $this;
+        $self['stopSequences'] = $stopSequences;
+
+        return $self;
+    }
+
+    /**
+     * Whether to incrementally stream the response using server-sent events. When `true`, SDKs return a raw event stream.
+     *
+     * In the TypeScript, Python and Ruby SDKs, the recommended way to stream is `messages.stream()`. It sets `stream` for you and accumulates the events into the final message. See [Streaming with SDKs](https://platform.claude.com/docs/en/build-with-claude/streaming#streaming-with-sdks) for an example in each language.
+     */
+    public function withStream(bool $stream): self
+    {
+        $self = clone $this;
+        $self['stream'] = $stream;
+
+        return $self;
+    }
+
+    /**
+     * System prompt.
+     *
+     * A system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role).
+     *
+     * @param SystemShape $system
+     */
+    public function withSystem(string|array $system): self
+    {
+        $self = clone $this;
+        $self['system'] = $system;
+
+        return $self;
+    }
+
+    /**
+     * Configuration for Claude's thinking.
+     *
+     * With `{"type": "adaptive"}`, Claude decides when and how much to think. With `{"type": "enabled"}` (manual extended thinking), you set a `budget_tokens` of at least 1,024. Thinking tokens count toward your `max_tokens` limit.
+     *
+     * Which `type` values are accepted, and what happens when you omit `thinking`, depend on the model. See [thinking](https://platform.claude.com/docs/en/build-with-claude/thinking#configuring-thinking) for each model's behavior.
+     *
+     * @param ThinkingConfigParamShape $thinking
+     */
+    public function withThinking(
+        ThinkingConfigEnabled|array|ThinkingConfigDisabled|ThinkingConfigBetweenTools|ThinkingConfigAdaptive $thinking,
+    ): self {
+        $self = clone $this;
+        $self['thinking'] = $thinking;
+
+        return $self;
+    }
+
+    /**
+     * How the model should use the provided tools. The model can use a specific tool, any available tool, decide by itself, or not use tools at all.
+     *
+     * @param ToolChoiceShape $toolChoice
+     */
+    public function withToolChoice(
+        ToolChoiceAuto|array|ToolChoiceAny|ToolChoiceTool|ToolChoiceNone $toolChoice
+    ): self {
+        $self = clone $this;
+        $self['toolChoice'] = $toolChoice;
+
+        return $self;
+    }
+
+    /**
+     * Definitions of tools that the model may use.
+     *
+     * If you include `tools` in your API request, the model may return `tool_use` content blocks that represent the model's use of those tools. You can then run those tools using the tool input generated by the model and then optionally return results back to the model using `tool_result` content blocks.
+     *
+     * There are two types of tools: **client tools** and **server tools**. The behavior described below applies to client tools. For [server tools](https://platform.claude.com/docs/en/agents-and-tools/tool-use/server-tools), see their individual documentation as each has its own behavior (e.g., the [web search tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool)).
+     *
+     * Each tool definition includes:
+     *
+     * * `name`: Name of the tool.
+     * * `description`: Optional, but strongly-recommended description of the tool.
+     * * `input_schema`: [JSON schema](https://json-schema.org/draft/2020-12) for the tool `input` shape that the model will produce in `tool_use` output content blocks.
+     *
+     * For example, if you defined `tools` as:
+     *
+     * ```json
+     * [
+     *   {
+     *     "name": "get_stock_price",
+     *     "description": "Get the current stock price for a given ticker symbol.",
+     *     "input_schema": {
+     *       "type": "object",
+     *       "properties": {
+     *         "ticker": {
+     *           "type": "string",
+     *           "description": "The stock ticker symbol, e.g. AAPL for Apple Inc."
+     *         }
+     *       },
+     *       "required": ["ticker"]
+     *     }
+     *   }
+     * ]
+     * ```
+     *
+     * And then asked the model "What's the S&P 500 at today?", the model might produce `tool_use` content blocks in the response like this:
+     *
+     * ```json
+     * [
+     *   {
+     *     "type": "tool_use",
+     *     "id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",
+     *     "name": "get_stock_price",
+     *     "input": { "ticker": "^GSPC" }
+     *   }
+     * ]
+     * ```
+     *
+     * You might then run your `get_stock_price` tool with `{"ticker": "^GSPC"}` as an input, and return the following back to the model in a subsequent `user` message:
+     *
+     * ```json
+     * [
+     *   {
+     *     "type": "tool_result",
+     *     "tool_use_id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",
+     *     "content": "259.75 USD"
+     *   }
+     * ]
+     * ```
+     *
+     * Tools can be used for workflows that include running client-side tools and functions, or more generally whenever you want the model to produce a particular JSON structure of output.
+     *
+     * See our [guide](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview) for more details.
+     *
+     * @param list<ToolUnionShape> $tools
+     */
+    public function withTools(array $tools): self
+    {
+        $self = clone $this;
+        $self['tools'] = $tools;
+
+        return $self;
+    }
+}

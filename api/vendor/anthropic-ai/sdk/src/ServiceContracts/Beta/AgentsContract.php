@@ -1,0 +1,179 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\ServiceContracts\Beta;
+
+use Anthropic\Beta\Agents\BetaManagedAgentsAgent;
+use Anthropic\Beta\Agents\BetaManagedAgentsAWSRoleExecutionIdentityParams;
+use Anthropic\Beta\Agents\BetaManagedAgentsModel;
+use Anthropic\Beta\Agents\BetaManagedAgentsModelConfigParams;
+use Anthropic\Beta\Agents\BetaManagedAgentsMultiagent20261001Params;
+use Anthropic\Beta\Agents\BetaManagedAgentsMultiagentCoordinatorParams;
+use Anthropic\Beta\Agents\BetaManagedAgentsServiceAccountExecutionIdentityParams;
+use Anthropic\Beta\Agents\BetaManagedAgentsURLMCPServerParams;
+use Anthropic\Beta\AnthropicBeta;
+use Anthropic\Core\Exceptions\APIException;
+use Anthropic\PageCursor;
+use Anthropic\RequestOptions;
+
+/**
+ * @phpstan-import-type ModelShape from \Anthropic\Beta\Agents\AgentCreateParams\Model
+ * @phpstan-import-type BetaManagedAgentsExecutionIdentityParamsShape from \Anthropic\Beta\Agents\BetaManagedAgentsExecutionIdentityParams
+ * @phpstan-import-type BetaManagedAgentsURLMCPServerParamsShape from \Anthropic\Beta\Agents\BetaManagedAgentsURLMCPServerParams
+ * @phpstan-import-type BetaManagedAgentsMultiagentParamsShape from \Anthropic\Beta\Sessions\BetaManagedAgentsMultiagentParams
+ * @phpstan-import-type BetaManagedAgentsSkillParamsShape from \Anthropic\Beta\Agents\BetaManagedAgentsSkillParams
+ * @phpstan-import-type ToolShape from \Anthropic\Beta\Agents\AgentCreateParams\Tool
+ * @phpstan-import-type RequestOpts from \Anthropic\RequestOptions
+ * @phpstan-import-type ModelShape from \Anthropic\Beta\Agents\AgentUpdateParams\Model as ModelShape1
+ * @phpstan-import-type ToolShape from \Anthropic\Beta\Agents\AgentUpdateParams\Tool as ToolShape1
+ */
+interface AgentsContract
+{
+    /**
+     * @api
+     *
+     * @param ModelShape $model Body param: Model identifier. Accepts the [model string](https://platform.claude.com/docs/en/about-claude/models/overview#latest-models-comparison), e.g. `claude-opus-5-5`, or a `model_config` object for additional configuration control
+     * @param string $name body param: Human-readable name for the agent
+     * @param string|null $description body param: Description of what the agent does
+     * @param BetaManagedAgentsExecutionIdentityParamsShape|null $executionIdentity Body param: Execution principal for runs of this agent. Omitting it, sending null, or sending `{"type": "service_account"}` stores the default.
+     * @param list<BetaManagedAgentsURLMCPServerParams|BetaManagedAgentsURLMCPServerParamsShape> $mcpServers Body param: MCP servers this agent connects to. Maximum 20. Names must be unique within the array. Every server must be referenced by an `mcp_toolset` in `tools`; unreferenced servers are rejected. See the [MCP connector guide](https://platform.claude.com/docs/en/managed-agents/mcp-connector).
+     * @param array<string,string> $metadata Body param: Arbitrary key-value metadata. Maximum 16 pairs, keys up to 64 chars, values up to 512 chars.
+     * @param BetaManagedAgentsMultiagentParamsShape|null $multiagent body param: Multiagent orchestration configuration
+     * @param list<BetaManagedAgentsSkillParamsShape> $skills body param: Skills available to the agent
+     * @param string|null $system body param: System prompt for the agent
+     * @param list<ToolShape> $tools Body param: Tool configurations available to the agent. Maximum of 256 tools across all toolsets allowed.
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function create(
+        BetaManagedAgentsModel|BetaManagedAgentsModelConfigParams|array|string $model,
+        string $name,
+        ?string $description = null,
+        BetaManagedAgentsAWSRoleExecutionIdentityParams|array|BetaManagedAgentsServiceAccountExecutionIdentityParams|null $executionIdentity = null,
+        ?array $mcpServers = null,
+        ?array $metadata = null,
+        BetaManagedAgentsMultiagentCoordinatorParams|array|BetaManagedAgentsMultiagent20261001Params|null $multiagent = null,
+        ?array $skills = null,
+        ?string $system = null,
+        ?array $tools = null,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): BetaManagedAgentsAgent;
+
+    /**
+     * @api
+     *
+     * @param string $agentID path param: Unique identifier of the agent to retrieve
+     * @param int $version Query param: Agent version. Omit for the most recent version. Must be at least 1 if specified.
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function retrieve(
+        string $agentID,
+        ?int $version = null,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): BetaManagedAgentsAgent;
+
+    /**
+     * @api
+     *
+     * @param string $agentID path param: Unique identifier of the agent to update
+     * @param string|null $description Body param: Description. Omit to preserve; send empty string or null to clear.
+     * @param BetaManagedAgentsExecutionIdentityParamsShape|null $executionIdentity Body param: Execution principal for runs of this agent. Full replacement. Omit to preserve; send null or `{"type": "service_account"}` to restore the default.
+     * @param list<BetaManagedAgentsURLMCPServerParams|BetaManagedAgentsURLMCPServerParamsShape>|null $mcpServers Body param: MCP servers. Full replacement. Omit to preserve; send empty array or `null` to clear. Names must be unique. Maximum 20. Every server must be referenced by an `mcp_toolset` in the agent's resulting `tools`; unreferenced servers are rejected. See the [MCP connector guide](https://platform.claude.com/docs/en/managed-agents/mcp-connector).
+     * @param array<string,string|null>|null $metadata Body param: Metadata patch. Set a key to a string to upsert it, or to null to delete it. Omit the field to preserve. The stored bag is limited to 16 keys (up to 64 chars each) with values up to 512 chars.
+     * @param ModelShape1 $model Body param: Model identifier. Accepts the [model string](https://platform.claude.com/docs/en/about-claude/models/overview#latest-models-comparison), e.g. `claude-opus-5-5`, or a `model_config` object for additional configuration control. Omit to preserve. Cannot be cleared.
+     * @param BetaManagedAgentsMultiagentParamsShape|null $multiagent Body param: Multiagent orchestration configuration. Full replacement. Omit to preserve; send null to clear.
+     * @param string $name Body param: Human-readable name. Must be non-empty. Omit to preserve. Cannot be cleared.
+     * @param list<BetaManagedAgentsSkillParamsShape>|null $skills Body param: Skills. Full replacement. Omit to preserve; send empty array or null to clear.
+     * @param string|null $system Body param: System prompt. Omit to preserve; send empty string or null to clear.
+     * @param list<ToolShape1>|null $tools Body param: Tool configurations available to the agent. Full replacement. Omit to preserve; send empty array or null to clear. Maximum of 256 tools across all toolsets allowed.
+     * @param int $version Body param: The agent's current version, used to prevent concurrent overwrites. Obtain this value from a create or retrieve response. Must be at least 1 if specified. When supplied, the request fails if it does not match the server's current version; omit to apply the update unconditionally.
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function update(
+        string $agentID,
+        ?string $description = null,
+        BetaManagedAgentsAWSRoleExecutionIdentityParams|array|BetaManagedAgentsServiceAccountExecutionIdentityParams|null $executionIdentity = null,
+        ?array $mcpServers = null,
+        ?array $metadata = null,
+        BetaManagedAgentsModel|BetaManagedAgentsModelConfigParams|array|string|null $model = null,
+        BetaManagedAgentsMultiagentCoordinatorParams|array|BetaManagedAgentsMultiagent20261001Params|null $multiagent = null,
+        ?string $name = null,
+        ?array $skills = null,
+        ?string $system = null,
+        ?array $tools = null,
+        ?int $version = null,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): BetaManagedAgentsAgent;
+
+    /**
+     * @api
+     *
+     * @param \DateTimeInterface $createdAtGte query param: Return agents created at or after this time (inclusive)
+     * @param \DateTimeInterface $createdAtLte query param: Return agents created at or before this time (inclusive)
+     * @param bool $includeArchived Query param: Include archived agents in results. Defaults to false.
+     * @param int $limit Query param: Maximum results per page. Default 20, maximum 100.
+     * @param string $page query param: Opaque pagination cursor from a previous response
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return PageCursor<BetaManagedAgentsAgent>
+     *
+     * @throws APIException
+     */
+    public function list(
+        ?\DateTimeInterface $createdAtGte = null,
+        ?\DateTimeInterface $createdAtLte = null,
+        ?bool $includeArchived = null,
+        ?int $limit = null,
+        ?string $page = null,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): PageCursor;
+
+    /**
+     * @api
+     *
+     * @param string $agentID unique identifier of the agent to archive
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas this endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function archive(
+        string $agentID,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): BetaManagedAgentsAgent;
+}

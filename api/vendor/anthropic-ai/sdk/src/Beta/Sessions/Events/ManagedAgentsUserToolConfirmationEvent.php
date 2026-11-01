@@ -1,0 +1,204 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Beta\Sessions\Events;
+
+use Anthropic\Beta\Sessions\Events\ManagedAgentsUserToolConfirmationEvent\Result;
+use Anthropic\Core\Attributes\Optional;
+use Anthropic\Core\Attributes\Required;
+use Anthropic\Core\Concerns\SdkModel;
+use Anthropic\Core\Contracts\BaseModel;
+use Anthropic\Core\Conversion\ConstantOf;
+
+/**
+ * A tool confirmation event that approves or denies a pending tool execution.
+ *
+ * @phpstan-type ManagedAgentsUserToolConfirmationEventShape = array{
+ *   id: string,
+ *   result: Result|value-of<Result>,
+ *   toolUseID: string,
+ *   type: 'user.tool_confirmation',
+ *   denyMessage?: string|null,
+ *   processedAt?: \DateTimeInterface|null,
+ *   sessionThreadID?: string|null,
+ * }
+ */
+final class ManagedAgentsUserToolConfirmationEvent implements BaseModel
+{
+    /** @use SdkModel<ManagedAgentsUserToolConfirmationEventShape> */
+    use SdkModel;
+
+    /** @var 'user.tool_confirmation' $type */
+    #[Required(type: new ConstantOf('user.tool_confirmation'))]
+    public string $type = 'user.tool_confirmation';
+
+    /**
+     * Unique identifier for this event.
+     */
+    #[Required]
+    public string $id;
+
+    /**
+     * The confirmation result: 'allow' or 'deny'.
+     *
+     * @var value-of<Result> $result
+     */
+    #[Required(enum: Result::class)]
+    public string $result;
+
+    /**
+     * The id of the `agent.tool_use` or `agent.mcp_tool_use` event this result corresponds to, which can be found in the last `session.status_idle` [event's](https://platform.claude.com/docs/en/api/beta/sessions/events/list#beta_managed_agents_session_requires_action.event_ids) `stop_reason.event_ids` field.
+     */
+    #[Required('tool_use_id')]
+    public string $toolUseID;
+
+    /**
+     * Optional message providing context for a 'deny' decision. Only allowed when result is 'deny'.
+     */
+    #[Optional('deny_message', nullable: true)]
+    public ?string $denyMessage;
+
+    /**
+     * Timestamp when the confirmation was processed.
+     */
+    #[Optional('processed_at', nullable: true)]
+    public ?\DateTimeInterface $processedAt;
+
+    /**
+     * Set by the server to the subagent thread this confirmation was routed to. Omitted when it was routed to the primary thread.
+     */
+    #[Optional('session_thread_id', nullable: true)]
+    public ?string $sessionThreadID;
+
+    /**
+     * `new ManagedAgentsUserToolConfirmationEvent()` is missing required properties by the API.
+     *
+     * To enforce required parameters use
+     * ```
+     * ManagedAgentsUserToolConfirmationEvent::with(
+     *   id: ..., result: ..., toolUseID: ...
+     * )
+     * ```
+     *
+     * Otherwise ensure the following setters are called
+     *
+     * ```
+     * (new ManagedAgentsUserToolConfirmationEvent())
+     *   ->withID(...)
+     *   ->withResult(...)
+     *   ->withToolUseID(...)
+     * ```
+     */
+    public function __construct()
+    {
+        $this->initialize();
+    }
+
+    /**
+     * Construct an instance from the required parameters.
+     *
+     * You must use named parameters to construct any parameters with a default value.
+     *
+     * @param Result|value-of<Result> $result
+     */
+    public static function with(
+        string $id,
+        Result|string $result,
+        string $toolUseID,
+        ?string $denyMessage = null,
+        ?\DateTimeInterface $processedAt = null,
+        ?string $sessionThreadID = null,
+    ): self {
+        $self = new self;
+
+        $self['id'] = $id;
+        $self['result'] = $result;
+        $self['toolUseID'] = $toolUseID;
+
+        null !== $denyMessage && $self['denyMessage'] = $denyMessage;
+        null !== $processedAt && $self['processedAt'] = $processedAt;
+        null !== $sessionThreadID && $self['sessionThreadID'] = $sessionThreadID;
+
+        return $self;
+    }
+
+    /**
+     * Unique identifier for this event.
+     */
+    public function withID(string $id): self
+    {
+        $self = clone $this;
+        $self['id'] = $id;
+
+        return $self;
+    }
+
+    /**
+     * The confirmation result: 'allow' or 'deny'.
+     *
+     * @param Result|value-of<Result> $result
+     */
+    public function withResult(Result|string $result): self
+    {
+        $self = clone $this;
+        $self['result'] = $result;
+
+        return $self;
+    }
+
+    /**
+     * The id of the `agent.tool_use` or `agent.mcp_tool_use` event this result corresponds to, which can be found in the last `session.status_idle` [event's](https://platform.claude.com/docs/en/api/beta/sessions/events/list#beta_managed_agents_session_requires_action.event_ids) `stop_reason.event_ids` field.
+     */
+    public function withToolUseID(string $toolUseID): self
+    {
+        $self = clone $this;
+        $self['toolUseID'] = $toolUseID;
+
+        return $self;
+    }
+
+    /**
+     * @param 'user.tool_confirmation' $type
+     */
+    public function withType(string $type): self
+    {
+        $self = clone $this;
+        $self['type'] = $type;
+
+        return $self;
+    }
+
+    /**
+     * Optional message providing context for a 'deny' decision. Only allowed when result is 'deny'.
+     */
+    public function withDenyMessage(?string $denyMessage): self
+    {
+        $self = clone $this;
+        $self['denyMessage'] = $denyMessage;
+
+        return $self;
+    }
+
+    /**
+     * Timestamp when the confirmation was processed.
+     */
+    public function withProcessedAt(?\DateTimeInterface $processedAt): self
+    {
+        $self = clone $this;
+        $self['processedAt'] = $processedAt;
+
+        return $self;
+    }
+
+    /**
+     * Set by the server to the subagent thread this confirmation was routed to. Omitted when it was routed to the primary thread.
+     */
+    public function withSessionThreadID(?string $sessionThreadID): self
+    {
+        $self = clone $this;
+        $self['sessionThreadID'] = $sessionThreadID;
+
+        return $self;
+    }
+}

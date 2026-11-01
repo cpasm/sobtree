@@ -1,0 +1,366 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Beta\Sessions;
+
+use Anthropic\Beta\AnthropicBeta;
+use Anthropic\Beta\Sessions\SessionListParams\Order;
+use Anthropic\Beta\Sessions\SessionListParams\Status;
+use Anthropic\Core\Attributes\Optional;
+use Anthropic\Core\Concerns\SdkModel;
+use Anthropic\Core\Concerns\SdkParams;
+use Anthropic\Core\Contracts\BaseModel;
+
+/**
+ * List Sessions.
+ *
+ * @see Anthropic\Services\Beta\SessionsService::list()
+ *
+ * @phpstan-type SessionListParamsShape = array{
+ *   agentID?: string|null,
+ *   agentVersion?: int|null,
+ *   createdAtGt?: \DateTimeInterface|null,
+ *   createdAtGte?: \DateTimeInterface|null,
+ *   createdAtLt?: \DateTimeInterface|null,
+ *   createdAtLte?: \DateTimeInterface|null,
+ *   deploymentID?: string|null,
+ *   includeArchived?: bool|null,
+ *   limit?: int|null,
+ *   memoryStoreID?: string|null,
+ *   order?: null|Order|value-of<Order>,
+ *   page?: string|null,
+ *   statuses?: list<Status|value-of<Status>>|null,
+ *   betas?: list<string|AnthropicBeta|value-of<AnthropicBeta>>|null,
+ *   workspaceID?: string|null,
+ * }
+ */
+final class SessionListParams implements BaseModel
+{
+    /** @use SdkModel<SessionListParamsShape> */
+    use SdkModel;
+    use SdkParams;
+
+    /**
+     * Filter sessions created with this agent ID.
+     */
+    #[Optional]
+    public ?string $agentID;
+
+    /**
+     * Filter by agent version. Only applies when `agent_id` is also set.
+     */
+    #[Optional]
+    public ?int $agentVersion;
+
+    /**
+     * Return sessions created after this time (exclusive).
+     */
+    #[Optional]
+    public ?\DateTimeInterface $createdAtGt;
+
+    /**
+     * Return sessions created at or after this time (inclusive).
+     */
+    #[Optional]
+    public ?\DateTimeInterface $createdAtGte;
+
+    /**
+     * Return sessions created before this time (exclusive).
+     */
+    #[Optional]
+    public ?\DateTimeInterface $createdAtLt;
+
+    /**
+     * Return sessions created at or before this time (inclusive).
+     */
+    #[Optional]
+    public ?\DateTimeInterface $createdAtLte;
+
+    /**
+     * Filter sessions created by this deployment ID.
+     */
+    #[Optional]
+    public ?string $deploymentID;
+
+    /**
+     * When true, includes archived sessions. Default: false (exclude archived).
+     */
+    #[Optional]
+    public ?bool $includeArchived;
+
+    /**
+     * Maximum number of results to return.
+     */
+    #[Optional]
+    public ?int $limit;
+
+    /**
+     * Filter sessions whose resources contain a `memory_store` with this memory store ID.
+     */
+    #[Optional]
+    public ?string $memoryStoreID;
+
+    /**
+     * Sort direction for results, ordered by `created_at`. Defaults to `desc` (newest first).
+     *
+     * @var value-of<Order>|null $order
+     */
+    #[Optional(enum: Order::class)]
+    public ?string $order;
+
+    /**
+     * Opaque pagination cursor from a previous response.
+     */
+    #[Optional]
+    public ?string $page;
+
+    /**
+     * Filter by session status. Repeat the parameter to match any of multiple statuses.
+     *
+     * @var list<value-of<Status>>|null $statuses
+     */
+    #[Optional(list: Status::class)]
+    public ?array $statuses;
+
+    /**
+     * This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header.
+     *
+     * @var list<string|value-of<AnthropicBeta>>|null $betas
+     */
+    #[Optional(list: AnthropicBeta::class)]
+    public ?array $betas;
+
+    /**
+     * Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     */
+    #[Optional]
+    public ?string $workspaceID;
+
+    public function __construct()
+    {
+        $this->initialize();
+    }
+
+    /**
+     * Construct an instance from the required parameters.
+     *
+     * You must use named parameters to construct any parameters with a default value.
+     *
+     * @param Order|value-of<Order>|null $order
+     * @param list<Status|value-of<Status>>|null $statuses
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>>|null $betas
+     */
+    public static function with(
+        ?string $agentID = null,
+        ?int $agentVersion = null,
+        ?\DateTimeInterface $createdAtGt = null,
+        ?\DateTimeInterface $createdAtGte = null,
+        ?\DateTimeInterface $createdAtLt = null,
+        ?\DateTimeInterface $createdAtLte = null,
+        ?string $deploymentID = null,
+        ?bool $includeArchived = null,
+        ?int $limit = null,
+        ?string $memoryStoreID = null,
+        Order|string|null $order = null,
+        ?string $page = null,
+        ?array $statuses = null,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+    ): self {
+        $self = new self;
+
+        null !== $agentID && $self['agentID'] = $agentID;
+        null !== $agentVersion && $self['agentVersion'] = $agentVersion;
+        null !== $createdAtGt && $self['createdAtGt'] = $createdAtGt;
+        null !== $createdAtGte && $self['createdAtGte'] = $createdAtGte;
+        null !== $createdAtLt && $self['createdAtLt'] = $createdAtLt;
+        null !== $createdAtLte && $self['createdAtLte'] = $createdAtLte;
+        null !== $deploymentID && $self['deploymentID'] = $deploymentID;
+        null !== $includeArchived && $self['includeArchived'] = $includeArchived;
+        null !== $limit && $self['limit'] = $limit;
+        null !== $memoryStoreID && $self['memoryStoreID'] = $memoryStoreID;
+        null !== $order && $self['order'] = $order;
+        null !== $page && $self['page'] = $page;
+        null !== $statuses && $self['statuses'] = $statuses;
+        null !== $betas && $self['betas'] = $betas;
+        null !== $workspaceID && $self['workspaceID'] = $workspaceID;
+
+        return $self;
+    }
+
+    /**
+     * Filter sessions created with this agent ID.
+     */
+    public function withAgentID(string $agentID): self
+    {
+        $self = clone $this;
+        $self['agentID'] = $agentID;
+
+        return $self;
+    }
+
+    /**
+     * Filter by agent version. Only applies when `agent_id` is also set.
+     */
+    public function withAgentVersion(int $agentVersion): self
+    {
+        $self = clone $this;
+        $self['agentVersion'] = $agentVersion;
+
+        return $self;
+    }
+
+    /**
+     * Return sessions created after this time (exclusive).
+     */
+    public function withCreatedAtGt(\DateTimeInterface $createdAtGt): self
+    {
+        $self = clone $this;
+        $self['createdAtGt'] = $createdAtGt;
+
+        return $self;
+    }
+
+    /**
+     * Return sessions created at or after this time (inclusive).
+     */
+    public function withCreatedAtGte(\DateTimeInterface $createdAtGte): self
+    {
+        $self = clone $this;
+        $self['createdAtGte'] = $createdAtGte;
+
+        return $self;
+    }
+
+    /**
+     * Return sessions created before this time (exclusive).
+     */
+    public function withCreatedAtLt(\DateTimeInterface $createdAtLt): self
+    {
+        $self = clone $this;
+        $self['createdAtLt'] = $createdAtLt;
+
+        return $self;
+    }
+
+    /**
+     * Return sessions created at or before this time (inclusive).
+     */
+    public function withCreatedAtLte(\DateTimeInterface $createdAtLte): self
+    {
+        $self = clone $this;
+        $self['createdAtLte'] = $createdAtLte;
+
+        return $self;
+    }
+
+    /**
+     * Filter sessions created by this deployment ID.
+     */
+    public function withDeploymentID(string $deploymentID): self
+    {
+        $self = clone $this;
+        $self['deploymentID'] = $deploymentID;
+
+        return $self;
+    }
+
+    /**
+     * When true, includes archived sessions. Default: false (exclude archived).
+     */
+    public function withIncludeArchived(bool $includeArchived): self
+    {
+        $self = clone $this;
+        $self['includeArchived'] = $includeArchived;
+
+        return $self;
+    }
+
+    /**
+     * Maximum number of results to return.
+     */
+    public function withLimit(int $limit): self
+    {
+        $self = clone $this;
+        $self['limit'] = $limit;
+
+        return $self;
+    }
+
+    /**
+     * Filter sessions whose resources contain a `memory_store` with this memory store ID.
+     */
+    public function withMemoryStoreID(string $memoryStoreID): self
+    {
+        $self = clone $this;
+        $self['memoryStoreID'] = $memoryStoreID;
+
+        return $self;
+    }
+
+    /**
+     * Sort direction for results, ordered by `created_at`. Defaults to `desc` (newest first).
+     *
+     * @param Order|value-of<Order> $order
+     */
+    public function withOrder(Order|string $order): self
+    {
+        $self = clone $this;
+        $self['order'] = $order;
+
+        return $self;
+    }
+
+    /**
+     * Opaque pagination cursor from a previous response.
+     */
+    public function withPage(string $page): self
+    {
+        $self = clone $this;
+        $self['page'] = $page;
+
+        return $self;
+    }
+
+    /**
+     * Filter by session status. Repeat the parameter to match any of multiple statuses.
+     *
+     * @param list<Status|value-of<Status>> $statuses
+     */
+    public function withStatuses(array $statuses): self
+    {
+        $self = clone $this;
+        $self['statuses'] = $statuses;
+
+        return $self;
+    }
+
+    /**
+     * This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header.
+     *
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas
+     */
+    public function withBetas(array $betas): self
+    {
+        $self = clone $this;
+        $self['betas'] = $betas;
+
+        return $self;
+    }
+
+    /**
+     * Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     */
+    public function withWorkspaceID(string $workspaceID): self
+    {
+        $self = clone $this;
+        $self['workspaceID'] = $workspaceID;
+
+        return $self;
+    }
+}

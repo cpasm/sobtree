@@ -1,0 +1,272 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\Services;
+
+use Anthropic\Client;
+use Anthropic\Core\Contracts\BaseResponse;
+use Anthropic\Core\Contracts\BaseStream;
+use Anthropic\Core\Exceptions\APIException;
+use Anthropic\Core\Implementation\ApiCallInfo;
+use Anthropic\Core\Implementation\RawResponse;
+use Anthropic\Core\Util;
+use Anthropic\Lib\Tracing\Tracing;
+use Anthropic\Messages\CacheControlEphemeral;
+use Anthropic\Messages\DiagnosticsParam;
+use Anthropic\Messages\Message;
+use Anthropic\Messages\MessageCountTokensParams;
+use Anthropic\Messages\MessageCreateParams;
+use Anthropic\Messages\MessageCreateParams\ServiceTier;
+use Anthropic\Messages\MessageCreateParams\Speed;
+use Anthropic\Messages\MessageTokensCount;
+use Anthropic\Messages\Metadata;
+use Anthropic\Messages\Model;
+use Anthropic\Messages\OutputConfig;
+use Anthropic\Messages\RawContentBlockDeltaEvent;
+use Anthropic\Messages\RawContentBlockStartEvent;
+use Anthropic\Messages\RawContentBlockStopEvent;
+use Anthropic\Messages\RawMessageDeltaEvent;
+use Anthropic\Messages\RawMessageStartEvent;
+use Anthropic\Messages\RawMessageStopEvent;
+use Anthropic\Messages\RawMessageStreamEvent;
+use Anthropic\RequestOptions;
+use Anthropic\ServiceContracts\MessagesRawContract;
+use Anthropic\SSEStream;
+
+/**
+ * @phpstan-import-type MessageParamShape from \Anthropic\Messages\MessageParam
+ * @phpstan-import-type CacheControlEphemeralShape from \Anthropic\Messages\CacheControlEphemeral
+ * @phpstan-import-type MessageCreateParamsContainerShape from \Anthropic\Messages\MessageCreateParamsContainer
+ * @phpstan-import-type DiagnosticsParamShape from \Anthropic\Messages\DiagnosticsParam
+ * @phpstan-import-type MetadataShape from \Anthropic\Messages\Metadata
+ * @phpstan-import-type OutputConfigShape from \Anthropic\Messages\OutputConfig
+ * @phpstan-import-type SystemShape from \Anthropic\Messages\MessageCreateParams\System
+ * @phpstan-import-type ThinkingConfigParamShape from \Anthropic\Messages\ThinkingConfigParam
+ * @phpstan-import-type ToolChoiceShape from \Anthropic\Messages\ToolChoice
+ * @phpstan-import-type ToolUnionShape from \Anthropic\Messages\ToolUnion
+ * @phpstan-import-type RequestOpts from \Anthropic\RequestOptions
+ * @phpstan-import-type SystemShape from \Anthropic\Messages\MessageCountTokensParams\System as SystemShape1
+ * @phpstan-import-type MessageCountTokensToolShape from \Anthropic\Messages\MessageCountTokensTool
+ */
+final class MessagesRawService implements MessagesRawContract
+{
+    // @phpstan-ignore-next-line
+    /**
+     * @internal
+     */
+    public function __construct(private Client $client) {}
+
+    /**
+     * @api
+     *
+     * Send a structured list of input messages with text and/or image content, and the model will generate the next message in the conversation.
+     *
+     * The Messages API can be used for either single queries or stateless multi-turn conversations.
+     *
+     * Learn more about the Messages API in our [user guide](https://platform.claude.com/docs/en/get-started)
+     *
+     * @param array{
+     *   maxTokens: int,
+     *   messages: list<MessageParamShape>,
+     *   model: string|Model|value-of<Model>,
+     *   cacheControl?: CacheControlEphemeral|CacheControlEphemeralShape|null,
+     *   container?: MessageCreateParamsContainerShape|null,
+     *   diagnostics?: DiagnosticsParam|DiagnosticsParamShape|null,
+     *   inferenceGeo?: string|null,
+     *   metadata?: Metadata|MetadataShape,
+     *   outputConfig?: OutputConfig|OutputConfigShape,
+     *   serviceTier?: ServiceTier|value-of<ServiceTier>,
+     *   speed?: Speed|value-of<Speed>|null,
+     *   stopSequences?: list<string>,
+     *   system?: SystemShape,
+     *   thinking?: ThinkingConfigParamShape,
+     *   toolChoice?: ToolChoiceShape,
+     *   tools?: list<ToolUnionShape>,
+     *   userProfileID?: string,
+     *   workspaceID?: string,
+     * }|MessageCreateParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<Message>
+     *
+     * @throws APIException
+     */
+    public function create(
+        array|MessageCreateParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse {
+        [$parsed, $options] = MessageCreateParams::parseRequest(
+            $params,
+            $requestOptions,
+        );
+        $header_params = [
+            'userProfileID' => 'anthropic-user-profile-id',
+            'workspaceID' => 'anthropic-workspace-id',
+        ];
+
+        $callSpan = Tracing::startCallSpan($this->client, 'anthropic.messages.create', '/v1/messages', $parsed, $options, $header_params);
+        Tracing::recordMessagesCreateRequest($this->client, $callSpan, $parsed);
+
+        $response = $this->client->request(
+            method: 'post',
+            path: 'v1/messages',
+            headers: Util::array_transform_keys(
+                array_intersect_key($parsed, array_flip(array_keys($header_params))),
+                $header_params,
+            ),
+            body: (object) array_diff_key(
+                $parsed,
+                array_flip(array_keys($header_params))
+            ),
+            options: $options->withApiCall(new ApiCallInfo(
+                name: $callSpan?->name,
+                span: $callSpan?->span,
+            )),
+            convert: Message::class,
+        );
+
+        // Only the response that the SDK's own `request()` returns records on the span: any other is returned as it is.
+        // @phpstan-ignore-next-line return.type
+        return $response instanceof RawResponse ? $response->thenUnwrap(fn (mixed $message, mixed $decoded): mixed => Tracing::recordMessagesCreateResponse($this->client, $callSpan, $parsed, $message, $decoded)) : $response;
+    }
+
+    /**
+     * @api
+     *
+     * @param array{
+     *   maxTokens: int,
+     *   messages: list<MessageParamShape>,
+     *   model: string|Model|value-of<Model>,
+     *   cacheControl?: CacheControlEphemeral|CacheControlEphemeralShape|null,
+     *   container?: MessageCreateParamsContainerShape|null,
+     *   diagnostics?: DiagnosticsParam|DiagnosticsParamShape|null,
+     *   inferenceGeo?: string|null,
+     *   metadata?: Metadata|MetadataShape,
+     *   outputConfig?: OutputConfig|OutputConfigShape,
+     *   serviceTier?: ServiceTier|value-of<ServiceTier>,
+     *   speed?: Speed|value-of<Speed>|null,
+     *   stopSequences?: list<string>,
+     *   system?: SystemShape,
+     *   thinking?: ThinkingConfigParamShape,
+     *   toolChoice?: ToolChoiceShape,
+     *   tools?: list<ToolUnionShape>,
+     *   userProfileID?: string,
+     *   workspaceID?: string,
+     * }|MessageCreateParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<BaseStream<RawMessageStartEvent|RawMessageDeltaEvent|RawMessageStopEvent|RawContentBlockStartEvent|RawContentBlockDeltaEvent|RawContentBlockStopEvent,>,>
+     *
+     * @throws APIException
+     */
+    public function createStream(
+        array|MessageCreateParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse {
+        [$parsed, $options] = MessageCreateParams::parseRequest(
+            $params,
+            $requestOptions,
+        );
+        $parsed['stream'] = true;
+        $header_params = [
+            'userProfileID' => 'anthropic-user-profile-id',
+            'workspaceID' => 'anthropic-workspace-id',
+        ];
+
+        $callSpan = Tracing::startCallSpan($this->client, 'anthropic.messages.create', '/v1/messages', $parsed, $options, $header_params);
+        Tracing::recordMessagesCreateRequest($this->client, $callSpan, $parsed);
+
+        // @phpstan-ignore-next-line return.type
+        return $this->client->request(
+            method: 'post',
+            path: 'v1/messages',
+            headers: Util::array_transform_keys(
+                [
+                    'Accept' => 'text/event-stream',
+                    ...array_intersect_key(
+                        $parsed,
+                        array_flip(array_keys($header_params))
+                    ),
+                ],
+                $header_params,
+            ),
+            body: (object) array_diff_key(
+                $parsed,
+                array_flip(array_keys($header_params))
+            ),
+            options: $options->withApiCall(new ApiCallInfo(
+                name: $callSpan?->name,
+                span: $callSpan?->span,
+            )),
+            convert: RawMessageStreamEvent::class,
+            stream: SSEStream::class,
+        );
+    }
+
+    /**
+     * @api
+     *
+     * Count the number of tokens in a Message.
+     *
+     * The Token Count API can be used to count the number of tokens in a Message, including tools, images, and documents, without creating it.
+     *
+     * Learn more about token counting in our [user guide](https://platform.claude.com/docs/en/build-with-claude/token-counting)
+     *
+     * @param array{
+     *   messages: list<MessageParamShape>,
+     *   model: string|Model|value-of<Model>,
+     *   cacheControl?: CacheControlEphemeral|CacheControlEphemeralShape|null,
+     *   outputConfig?: OutputConfig|OutputConfigShape,
+     *   speed?: MessageCountTokensParams\Speed|value-of<MessageCountTokensParams\Speed>|null,
+     *   system?: SystemShape1,
+     *   thinking?: ThinkingConfigParamShape,
+     *   toolChoice?: ToolChoiceShape,
+     *   tools?: list<MessageCountTokensToolShape>,
+     *   userProfileID?: string,
+     *   workspaceID?: string,
+     * }|MessageCountTokensParams $params
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return BaseResponse<MessageTokensCount>
+     *
+     * @throws APIException
+     */
+    public function countTokens(
+        array|MessageCountTokensParams $params,
+        RequestOptions|array|null $requestOptions = null,
+    ): BaseResponse {
+        [$parsed, $options] = MessageCountTokensParams::parseRequest(
+            $params,
+            $requestOptions,
+        );
+        $header_params = [
+            'userProfileID' => 'anthropic-user-profile-id',
+            'workspaceID' => 'anthropic-workspace-id',
+        ];
+
+        $callSpan = Tracing::startCallSpan($this->client, 'anthropic.messages.count_tokens', '/v1/messages/count_tokens', $parsed, $options, $header_params);
+
+        $response = $this->client->request(
+            method: 'post',
+            path: 'v1/messages/count_tokens',
+            headers: Util::array_transform_keys(
+                array_intersect_key($parsed, array_flip(array_keys($header_params))),
+                $header_params,
+            ),
+            body: (object) array_diff_key(
+                $parsed,
+                array_flip(array_keys($header_params))
+            ),
+            options: $options->withApiCall(new ApiCallInfo(
+                name: $callSpan?->name,
+                span: $callSpan?->span,
+            )),
+            convert: MessageTokensCount::class,
+        );
+
+        // Only the response that the SDK's own `request()` returns records on the span: any other is returned as it is.
+        // @phpstan-ignore-next-line return.type
+        return $response instanceof RawResponse ? $response->thenUnwrap(static fn (mixed $count): mixed => Tracing::recordMessagesCountTokensResponse($callSpan, $count)) : $response;
+    }
+}

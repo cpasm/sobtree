@@ -1,0 +1,2 @@
+# Librerías y scripts de servidor: nunca accesibles desde la web.
+Require all denied

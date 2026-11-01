@@ -1,0 +1,21 @@
+{
+  "_leeme": "Semanas sin plazas para Contrata. Lo actualiza la rutina de NEXUS con los eventos BLOQUEO del calendario de info@. Formato: {\"desde\": \"AAAA-MM-DD\", \"hasta\": \"AAAA-MM-DD\", \"nota\": \"opcional, sin datos personales\"}; hasta es inclusive y basta con tocar un día laborable de la semana para cerrarla entera. Si el archivo no es JSON válido, la web no ofrece fechas. Ver docs/contrata.md.",
+  "actualizado": "2026-10-31",
+  "bloqueos": [
+    {
+      "desde": "2026-11-02",
+      "hasta": "2026-11-06",
+      "nota": "BLOQUEO del calendario"
+    },
+    {
+      "desde": "2026-11-09",
+      "hasta": "2026-11-13",
+      "nota": "BLOQUEO del calendario (prueba)"
+    },
+    {
+      "desde": "2026-11-23",
+      "hasta": "2026-11-27",
+      "nota": "BLOQUEO del calendario"
+    }
+  ]
+}

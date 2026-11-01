@@ -1,0 +1,144 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anthropic\ServiceContracts\Beta;
+
+use Anthropic\Beta\AnthropicBeta;
+use Anthropic\Beta\Vaults\BetaManagedAgentsDeletedVault;
+use Anthropic\Beta\Vaults\BetaManagedAgentsVault;
+use Anthropic\Core\Exceptions\APIException;
+use Anthropic\PageCursor;
+use Anthropic\RequestOptions;
+
+/**
+ * @phpstan-import-type RequestOpts from \Anthropic\RequestOptions
+ */
+interface VaultsContract
+{
+    /**
+     * @api
+     *
+     * @param string $displayName Body param: Human-readable name for the vault. 1-255 characters.
+     * @param array<string,string> $metadata Body param: Arbitrary key-value metadata to attach to the vault. Maximum 16 pairs, keys up to 64 chars, values up to 512 chars.
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function create(
+        string $displayName,
+        ?array $metadata = null,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): BetaManagedAgentsVault;
+
+    /**
+     * @api
+     *
+     * @param string $vaultID unique identifier of the vault to retrieve
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas this endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function retrieve(
+        string $vaultID,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): BetaManagedAgentsVault;
+
+    /**
+     * @api
+     *
+     * @param string $vaultID path param: Unique identifier of the vault to update
+     * @param string|null $displayName Body param: Updated human-readable name for the vault. 1-255 characters.
+     * @param array<string,string|null>|null $metadata Body param: Metadata patch. Set a key to a string to upsert it, or to null to delete it. Omitted keys are preserved.
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function update(
+        string $vaultID,
+        ?string $displayName = null,
+        ?array $metadata = null,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): BetaManagedAgentsVault;
+
+    /**
+     * @api
+     *
+     * @param bool $includeArchived Query param: Whether to include archived vaults in the results. Defaults to `false`.
+     * @param int $limit Query param: Maximum number of vaults to return per page. Defaults to 20, maximum 100.
+     * @param string $page Query param: The `next_page` value from a previous [List Vaults](https://platform.claude.com/docs/en/api/beta/vaults/list) response, to get the next page. Leave it out to get the first page.
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas header param: This endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @return PageCursor<BetaManagedAgentsVault>
+     *
+     * @throws APIException
+     */
+    public function list(
+        ?bool $includeArchived = null,
+        ?int $limit = null,
+        ?string $page = null,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): PageCursor;
+
+    /**
+     * @api
+     *
+     * @param string $vaultID unique identifier of the vault to delete
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas this endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function delete(
+        string $vaultID,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): BetaManagedAgentsDeletedVault;
+
+    /**
+     * @api
+     *
+     * @param string $vaultID unique identifier of the vault to archive
+     * @param list<string|AnthropicBeta|value-of<AnthropicBeta>> $betas this endpoint is in beta: requests must send `managed-agents-2026-04-01` in this header
+     * @param string $workspaceID Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).
+     *
+     * Only needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.
+     * @param RequestOpts|null $requestOptions
+     *
+     * @throws APIException
+     */
+    public function archive(
+        string $vaultID,
+        ?array $betas = null,
+        ?string $workspaceID = null,
+        RequestOptions|array|null $requestOptions = null,
+    ): BetaManagedAgentsVault;
+}
