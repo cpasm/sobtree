@@ -8,74 +8,110 @@ import { euros } from "../../data/contrata-logica.mjs";
 const kitActivo = CONTRATA.activo;
 
 const TAREAS = [
-  { t: "Conciliaciones", d: "Cruzar extractos, facturas y apuntes a mano, línea a línea, cada mes." },
-  { t: "Recogida de documentación", d: "Perseguir a cada cliente por email o WhatsApp para que mande facturas, nóminas o justificantes." },
-  { t: "Respuestas repetidas", d: "Contestar una y otra vez las mismas dudas: plazos, documentos necesarios, estado de un trámite." },
-  { t: "Preparación de modelos", d: "Reunir y volcar datos de varias fuentes antes de poder empezar a revisar de verdad." },
-  { t: "Archivo y clasificación", d: "Renombrar, ordenar y archivar documentos que llegan en formatos y por canales distintos." },
-  { t: "Avisos y vencimientos", d: "Recordar a los clientes lo que les toca entregar y cuándo, uno por uno." }
+  { t: "Conciliaciones", d: "Cruzar extractos, facturas y apuntes a mano, línea a línea, cada mes.", i: "M4 7h10M4 12h16M4 17h10M18 5l2 2-2 2" },
+  { t: "Recogida de documentación", d: "Perseguir a cada cliente por email o WhatsApp para que mande facturas, nóminas o justificantes.", i: "M4 7l8 6 8-6M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" },
+  { t: "Respuestas repetidas", d: "Contestar una y otra vez las mismas dudas: plazos, documentos necesarios, estado de un trámite.", i: "M5 5h14v10H10l-5 4z" },
+  { t: "Preparación de modelos", d: "Reunir y volcar datos de varias fuentes antes de poder empezar a revisar de verdad.", i: "M4 19V5M4 19h16M8 15l4-4 3 3 5-6" },
+  { t: "Archivo y clasificación", d: "Renombrar, ordenar y archivar documentos que llegan en formatos y por canales distintos.", i: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" },
+  { t: "Avisos y vencimientos", d: "Recordar a los clientes lo que les toca entregar y cuándo, uno por uno.", i: "M12 5a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 9v4l3 2M9 3h6" }
 ];
 const ENTREGABLES = [
   "Entrevista con quien hace el trabajo de verdad.",
   "3 casos de uso priorizados por ahorro y facilidad.",
   "Ahorro estimado y coste de cada uno, en euros.",
   "Herramienta recomendada y coste mensual de licencias.",
-  "Plan para tener el primer caso de uso funcionando en 2–3 semanas.",
-  "Entregable: informe con el plan, el ahorro y el coste."
+  "Plan para tener el primer caso de uso funcionando en 2–3 semanas."
 ];
+// El entregable no es un paso más: se pinta aparte como cierre destacado.
+const ENTREGABLE = "informe con el plan, el ahorro y el coste.";
+const CHECK = "M5 12l5 5 9-10";
+const FLECHA = "M5 12h14M13 6l6 6-6 6";
 ---
 <Base title="IA para asesorías y gestorías de 10 a 49 personas | Sobtree" description="Diagnóstico IA exprés para asesorías y gestorías: qué tareas repetitivas automatizar, con ahorro estimado en euros, precio cerrado y plazo máximo de entrega." jsonld={graph(organization(), website())}>
-<main id="main" class="section page-tight">
+<main id="main">
+
+<section class="section ases-hero">
   <div class="wrap">
     <div class="section-head">
       <p class="eyebrow">Para asesorías y gestorías de 10 a 49 personas</p>
       <h1 class="page-title">El tiempo de tu equipo, en revisar y asesorar, <span class="dot-accent">no en copiar y perseguir</span></h1>
       <p class="section-sub">En una asesoría o gestoría hay tareas que se repiten cada mes con cada cliente. Un Diagnóstico IA exprés te dice cuáles tiene sentido automatizar, cuánto estimamos que se ahorra y cuánto cuesta, antes de gastar nada más.</p>
-      <p style="margin-top:24px"><a class="btn btn-primary" href="/#contacto">Solicitar conversación</a></p>
+      <div class="ases-cta"><a class="btn btn-primary" href="/#contacto">Solicitar conversación <svg class="ases-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d={FLECHA}/></svg></a></div>
     </div>
+  </div>
+</section>
 
-    <h2 class="page-title" style="font-size:clamp(24px,3vw,32px);margin-top:56px">Lo que probablemente reconoces</h2>
-    <div class="grid-3">
+<section class="section section-alt ases-sec">
+  <div class="wrap">
+    <h2 class="ases-h2">Lo que probablemente reconoces</h2>
+    <div class="ases-grid">
       {TAREAS.map((x) => (
         <div class="card">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d={x.i}/></svg></div>
           <h3>{x.t}</h3>
           <p>{x.d}</p>
         </div>
       ))}
     </div>
-
-    <h2 class="page-title" style="font-size:clamp(24px,3vw,32px);margin-top:56px">Qué incluye el Diagnóstico IA exprés</h2>
-    <p class="section-sub">Es un servicio cerrado: sabes qué recibes y qué cuesta desde el principio. El plazo de entrega del informe es de {PLAZO_DIAGNOSTICO} desde la fecha de inicio.</p>
-    <div class="card" style="margin-top:24px">
-      <ul>
-        {ENTREGABLES.map((e) => <li style="margin-top:10px;color:var(--text-2)">{e}</li>)}
-      </ul>
-    </div>
-    <p class="section-sub" style="margin-top:20px">Si no vemos un ahorro claro, te lo decimos en el informe y no te recomendamos gastos adicionales.</p>
-
-    <h2 class="page-title" style="font-size:clamp(24px,3vw,32px);margin-top:56px">Precio y plazo</h2>
-    <div class="card" style="margin-top:24px">
-      <p><strong>{TEXTOS.lineaCorta}</strong></p>
-      <p style="margin-top:12px">Precio cerrado, sin extras. Plazo de entrega del informe: {PLAZO_DIAGNOSTICO}.</p>
-      <p style="margin-top:12px">Las cifras de ahorro son estimaciones, no una garantía.</p>
-    </div>
-
-    {kitActivo && (
-    <div class="card kit-tarjeta" style="margin-top:56px">
-      <h2 style="font-size:clamp(22px,2.6vw,28px);margin:0">{KIT_ASESORIAS.nombre}</h2>
-      <p style="margin-top:12px;color:var(--text-2)">Prompts, plantillas y una hoja de medición para probar la IA en tres tareas que se repiten cada mes: pedir documentación, avisar de plazos y responder dudas. Empiezas en 30 minutos.</p>
-      <ul>
-        <li style="margin-top:10px;color:var(--text-2)"><strong>15 prompts</strong> en tres bloques: recogida de documentación, avisos de plazos y dudas repetidas.</li>
-        <li style="margin-top:10px;color:var(--text-2)"><strong>6 emails y 6 mensajes de WhatsApp</strong> editables, para adaptarlos a tu despacho.</li>
-        <li style="margin-top:10px;color:var(--text-2)"><strong>Hoja de medición</strong> y guía «Qué datos no pegar en una IA».</li>
-      </ul>
-      <p style="margin-top:20px"><a class="btn btn-primary" href={KIT_ASESORIAS.ruta}>Ver el kit · {euros(kitAsesoriasImportes.totalCentimos)}</a></p>
-    </div>
-    )}
-
-    <h2 class="page-title" style="font-size:clamp(24px,3vw,32px);margin-top:56px">Empieza por una conversación</h2>
-    <p class="section-sub">Cuéntanos cómo trabaja tu despacho. Te diremos con sinceridad si un diagnóstico tiene sentido en tu caso.</p>
-    <p style="margin-top:24px"><a class="btn btn-primary" href="/#contacto">Solicitar conversación</a></p>
   </div>
+</section>
+
+<section class="section ases-sec">
+  <div class="wrap">
+    <h2 class="ases-h2">Qué incluye el Diagnóstico IA exprés</h2>
+    <p class="section-sub">Es un servicio cerrado: sabes qué recibes y qué cuesta desde el principio. El plazo de entrega del informe es de {PLAZO_DIAGNOSTICO} desde la fecha de inicio.</p>
+    <div class="card ases-incluye">
+      <ul class="ases-checks ases-checks-2">
+        {ENTREGABLES.map((e) => <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d={CHECK}/></svg><span>{e}</span></li>)}
+      </ul>
+      <p class="ases-final"><span class="ases-tag" aria-hidden="true">Entregable</span><span><strong>Entregable:</strong> {ENTREGABLE}</span></p>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt ases-sec">
+  <div class="wrap">
+    <p class="eyebrow">Diagnóstico IA exprés</p>
+    <h2 class="ases-h2 ases-h2-tras-eyebrow">Precio y plazo</h2>
+    <div class="ases-price">
+      <div>
+        <p class="ases-big">{TEXTOS.lineaCorta}</p>
+        <p>Precio cerrado, sin extras. Plazo de entrega del informe: {PLAZO_DIAGNOSTICO}.</p>
+        <p>Las cifras de ahorro son estimaciones, no una garantía.</p>
+        <p class="ases-note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={CHECK}/></svg><span>Si no vemos un ahorro claro, te lo decimos en el informe y no te recomendamos gastos adicionales.</span></p>
+      </div>
+      <div class="ases-side"><a class="btn btn-primary" href="/#contacto">Solicitar conversación <svg class="ases-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d={FLECHA}/></svg></a></div>
+    </div>
+  </div>
+</section>
+
+{kitActivo && (
+<section class="section ases-sec">
+  <div class="wrap">
+    <div class="card kit-tarjeta ases-kit">
+      <div>
+        <p class="eyebrow">Kit IA · para empezar por tu cuenta</p>
+        <h2 class="ases-h2 ases-h2-kit ases-h2-tras-eyebrow">{KIT_ASESORIAS.nombre}</h2>
+        <p class="ases-desc">Prompts, plantillas y una hoja de medición para probar la IA en tres tareas que se repiten cada mes: pedir documentación, avisar de plazos y responder dudas. Empiezas en 30 minutos.</p>
+        <p class="ases-kit-cta"><a class="btn btn-primary" href={KIT_ASESORIAS.ruta}>Ver el kit · {euros(kitAsesoriasImportes.totalCentimos)} <svg class="ases-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d={FLECHA}/></svg></a></p>
+      </div>
+      <ul class="ases-checks">
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg><span><strong>15 prompts</strong> en tres bloques: recogida de documentación, avisos de plazos y dudas repetidas.</span></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg><span><strong>6 emails y 6 mensajes de WhatsApp</strong> editables, para adaptarlos a tu despacho.</span></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg><span><strong>Hoja de medición</strong> y guía «Qué datos no pegar en una IA».</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+)}
+
+<section class="section section-alt ases-sec ases-close">
+  <div class="wrap">
+    <h2 class="ases-h2">Empieza por una conversación</h2>
+    <p class="section-sub">Cuéntanos cómo trabaja tu despacho. Te diremos con sinceridad si un diagnóstico tiene sentido en tu caso.</p>
+    <div class="ases-cta"><a class="btn btn-primary" href="/#contacto">Solicitar conversación <svg class="ases-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d={FLECHA}/></svg></a></div>
+  </div>
+</section>
+
 </main>
 </Base>
